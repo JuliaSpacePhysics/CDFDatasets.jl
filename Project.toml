@@ -1,0 +1,7 @@
+name = "CDFDatasets"
+uuid = "075ae62b-f872-4368-b383-31e3aa6c3154"
+authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.10"
