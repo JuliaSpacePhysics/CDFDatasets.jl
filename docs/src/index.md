@@ -25,17 +25,19 @@ omni_file = joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_2
 ds = CDFDataset(omni_file)
 ```
 
-```@example omni
-# Explore the dataset
+Explore the dataset
+
+```@repl omni
 println("Variables: ", keys(ds))
 println("Attributes: ", keys(ds.attrib))
 ds.attrib["Descriptor"]
 ```
 
-```@example omni
-# Access variables
-println(ds["Epoch"])
-println(ds["Epoch"][[1,end]])
+Access variables
+
+```@repl omni
+ds["Epoch"]
+ds["Epoch"][[1,end]]
 ds["BR"]
 ```
 
