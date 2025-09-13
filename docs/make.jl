@@ -8,7 +8,7 @@ makedocs(;
     authors="Beforerr <zzj956959688@gmail.com> and contributors",
     sitename="CDFDatasets.jl",
     format=Documenter.HTML(;
-        canonical="https://Beforerr.github.io/CDFDatasets.jl",
+        canonical="https://juliaspacephysics.github.io/CDFDatasets.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/Beforerr/CDFDatasets.jl",
-    devbranch="main",
+    repo="github.com/JuliaSpacePhysics/CDFDatasets.jl",
+    push_preview = true,
 )
