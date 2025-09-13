@@ -2,8 +2,9 @@ module PyCDFpp
 using PythonCall
 import CommonDataModel as CDM
 import CommonDataModel: dimnames, variable, attribnames, attrib
-import ..CDFDatasets: CDFType, cdf_type, CDF_TIME_TT2000, tt2000_to_datetime
+import ..CDFDatasets: CDFType, cdf_type, CDF_TIME_TT2000
 import ..CDFDatasets as CDF
+using UnixTimes: UnixTime
 
 include("python.jl")
 

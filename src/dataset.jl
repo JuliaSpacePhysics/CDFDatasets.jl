@@ -5,7 +5,7 @@ end
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 
 """
-    CDFDataset(file; lazy_load = false)
+    CDFDataset(file; lazy_load = true)
 
 Load the CDF dataset at the `file` path. The dataset supports the API of the
 [JuliaGeo/CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl).

@@ -6,9 +6,14 @@ authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 [deps]
 CommonDataModel = "1fbeeb36-5f17-413c-809b-666fb144f157"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 UnixTimes = "ab1a18e7-b408-4913-896c-624bb82ed7f4"
+
+[extensions]
+CDFDatasetsDimensionalDataExt = "DimensionalData"
+
+[weakdeps]
+DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 
 [compat]
 CommonDataModel = "0.4.0"
