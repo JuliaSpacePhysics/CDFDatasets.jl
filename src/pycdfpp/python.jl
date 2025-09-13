@@ -13,7 +13,7 @@ end
 function tt2000_to_datetime_py(t)
     to_datetime64 = @pyconst pyimport("pycdfpp").to_datetime64
     py_dt64 = to_datetime64(t)
-    py_ns = PyArray{Int64, 1, true, true, Int64}(@py py_dt64.view("i8"); copy = false)
+    py_ns = PyArray{Int64, 1, true, false, Int64}(@py py_dt64.view("i8"); copy = false)
     return reinterpret(UnixTime, py_ns)
 end
 
@@ -35,9 +35,13 @@ function py2jlvalues(var; copy = false)
     cdftype = CDF.cdf_type(var)
     if cdftype == CDF_TIME_TT2000
         pyarr = PyArray{Int64, 1, true, false, Int64}(valid_py)
-        return tt2000_to_datetime.(pyarr)
+        return CDF.tt2000_to_datetime.(pyarr)
+    elseif cdftype == CDF.CDF_EPOCH
+        pyarr = PyArray{Float64, 1, true, false, Float64}(valid_py)
+        return CDF.epoch_to_datetime.(pyarr)
+    else
+        return PyArray(valid_py; copy)
     end
-    return PyArray(valid_py; copy)
 end
 
 function py2jlattrib(py, name)

@@ -62,3 +62,5 @@ function tt2000_to_datetime(t::Integer)
     leap_seconds_ns = leap_second(ns_from_1970)  # Already in nanoseconds
     return UNIX_EPOCH + Nanosecond(ns_from_1970 - leap_seconds_ns)
 end
+
+epoch_to_datetime(t) = DateTime(0) + Millisecond(t)

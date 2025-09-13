@@ -4,6 +4,13 @@ using Test
 import CDFDatasets as CDF
 import CDFDatasets.CommonDataModel as CDM
 
+@testset "CDFDatasets.jl (ISTP)" begin
+    omni_file = joinpath(@__DIR__, "..", "data", "omni_coho1hr_merged_mag_plasma_20240901_v01.cdf")
+    ds = CDFDataset(omni_file)
+    @test ds isa CDFDataset
+    @test CDF.PyCDFpp.tt2000_to_datetime_py(ds.source.py["Epoch"]) == CDF.UnixTime.(ds["Epoch"])
+end
+
 @testset "CDFDatasets.jl (ELFIN)" begin
     # Test file path
     elx_file = joinpath(@__DIR__, "..", "data", "elb_l2_epdef_20210914_v01.cdf")
@@ -30,6 +37,7 @@ import CDFDatasets.CommonDataModel as CDM
         @test var_type(var) == "support_data"
         @test CDF.CDFType2JuliaType[cdf_type(var)] == CDF.UnixTime
         @test length(var.attrib) == length(CDM.attribnames(var))
+        @test CDF.PyCDFpp.tt2000_to_datetime_py(ds.source.py["elb_pef_hs_time"]) == ds["elb_pef_hs_time"]
 
         @test ndims(ds["elb_pef_hs_epa_spec"]) == 2
         @test CDM.dim(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_hs_time"]
@@ -51,3 +59,6 @@ end
     ds["label_v3c"]
     @test ds isa CDFDataset
 end
+
+# Include DimensionalData extension tests if available
+include("test_dimensionaldata.jl")
