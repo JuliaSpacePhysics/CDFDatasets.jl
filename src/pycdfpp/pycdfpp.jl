@@ -2,9 +2,11 @@ module PyCDFpp
 using PythonCall
 import CommonDataModel as CDM
 import CommonDataModel: dimnames, variable, attribnames, attrib
-import ..CDFDatasets: CDFType, cdf_type, CDF_TIME_TT2000
+import ..CDFDatasets: CDFType, cdf_type
 import ..CDFDatasets as CDF
 using UnixTimes: UnixTime
+
+const CDF_TIME_TT2000 = CDFType(33)
 
 include("python.jl")
 
@@ -32,7 +34,8 @@ end
 
 function CDM.attrib(var::PyCDF, name::String)
     py = var.py
-    return pyconvert(String, @py py.attributes[name][0])
+    attr = @py py.attributes[name]
+    return pyconvert(Vector{String}, pylist(attr))
 end
 
 Base.parent(var::PyCDFVariable) = var.data

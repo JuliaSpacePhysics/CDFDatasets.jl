@@ -13,10 +13,13 @@ Load the CDF dataset at the `file` path. The dataset supports the API of the
 `lazy_load` controls whether variable values are loaded immediately or only when accessed by the user.
 If True, variables' values are loaded on demand. If False, all variable values are loaded during parsing.
 """
-function CDFDataset(file::AbstractString; backend = :pycdfpp, lazy_load = true)
-    path = abspath(file)
-    @assert backend in (:pycdfpp,)
-    return CDFDataset(PyCDFpp.load(path; lazy_load))
+function CDFDataset(file::AbstractString; backend = :julia, lazy_load = true)
+    @assert backend in (:pycdfpp, :julia)
+    if backend == :pycdfpp
+        return CDFDataset(PyCDFpp.load(file; lazy_load))
+    elseif backend == :julia
+        return CDFDataset(CDF.CDFDataset(file))
+    end
 end
 
 # Base interface

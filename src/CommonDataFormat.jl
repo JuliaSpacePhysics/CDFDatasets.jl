@@ -1,0 +1,1 @@
+cdf_type(var::CDF.CDFVariable) = var.datatype

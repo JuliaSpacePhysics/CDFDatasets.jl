@@ -1,6 +1,7 @@
 module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
+using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable
 import CommonDataModel as CDM
 using DimensionalData
 import DimensionalData: DimArray
@@ -20,16 +21,16 @@ function format_dim(data, dimvar, i)
     return DT(values)
 end
 
-function DimensionalData.dims(v::CDFDatasets.CDFVariable)
+function DimensionalData.dims(v::AbstractCDFVariable)
     return ntuple(ndims(v)) do i
         depend = CDM.dim(v, i)
         format_dim(v, depend, i)
     end
 end
 
-function DimArray(v::CDFDatasets.CDFVariable)
+function DimArray(v::AbstractCDFVariable)
     values = parent(v)
-    name = v.name
+    name = CDM.name(v)
     metadata = v.attrib
     return DimArray(values, dims(v); name, metadata)
 end
