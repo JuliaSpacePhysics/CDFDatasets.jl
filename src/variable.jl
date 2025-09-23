@@ -9,14 +9,25 @@ unwrap(var::AbstractCDFVariable) = var.data
 
 Base.parent(var::AbstractCDFVariable) = var.data
 Base.size(var::AbstractCDFVariable) = size(var.data)
-Base.getindex(var::AbstractCDFVariable, inds...) = var.data[inds...]
-Base.setindex!(var::AbstractCDFVariable, v, inds...) = var.data[inds...] = v
+# Base.getindex(var::AbstractCDFVariable, inds...) = var.data[inds...]
+# Base.setindex!(var::AbstractCDFVariable, v, inds...) = var.data[inds...] = v
+
+
+function DiskArrays.readblock!(a::AbstractCDFVariable, aout, inds::AbstractUnitRange...)
+    return DiskArrays.readblock!(a.data, aout, inds...)
+end
+
+function DiskArrays.eachchunk(var::AbstractCDFVariable)
+    return DiskArrays.eachchunk(var.data)
+end
 
 CDM.name(var::CDFVariable) = var.name
 CDM.dataset(var::CDFVariable) = var.parentdataset
 CDM.attribnames(var::CDFVariable) = CDM.attribnames(var.data)
+CDM.attrib(var::CDFVariable) = CDM.attrib(var.data)
 CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var.data, name)
 CDM.dimnames(var::CDFVariable, i::Int) = CDM.dimnames(var.data, i)
+CDM.parentdataset(var::CDFVariable) = var.parentdataset
 
 cdf_type(var::CDFVariable) = cdf_type(var.data)
 
@@ -37,3 +48,6 @@ function CDM.dim(var::CDFVariable, i::Int)
         return axes(var.data, i)
     end
 end
+
+
+CDF.is_record_varying(var::CDFVariable) = CDF.is_record_varying(var.data)

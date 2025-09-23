@@ -22,6 +22,7 @@ data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
         @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
             k == v
         end
+        @test CDF.replace_invalid(ds["BR"]) isa Array
         @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
     end
 end
@@ -33,6 +34,7 @@ end
     var1 = CDFDataset(file1)["V"]
     var2 = CDFDataset(file2)["V"]
     var = cat(var1, var2; dims = 1)
+    @test var == ConcatCDFVariable([var1, var2])
     @test var isa ConcatCDFVariable
     @test var.data == vcat(var1.data, var2.data)
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
@@ -67,13 +69,16 @@ end
         @test length(var.attrib) == length(CDM.attribnames(var))
 
         @test ndims(ds["elb_pef_hs_epa_spec"]) == 2
-        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 2) == ds["elb_pef_energies_mean"]
+        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 2) == ds["elb_pef_hs_time"]
+        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_energies_mean"]
 
         @test ndims(ds["elb_pef_hs_Epat_eflux"]) == 3
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_hs_epa_spec"]
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_energies_mean"]
+        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
+        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1) == ds["elb_pef_hs_epa_spec"]
+        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
+        @test is_record_varying(ds["elb_pef_hs_Epat_eflux"]) == true
+        @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
+        @test is_record_varying(ds["elb_pef_energies_mean"]) == false
         @test var_type(ds["elb_pef_hs_Epat_eflux"]) == "data"
     end
 
