@@ -5,3 +5,6 @@ Manifest*.toml
 /docs/Manifest*.toml
 /docs/build/
 .CondaPkg
+
+# Dataset
+data/elb_l2_epdef_20210607_v01.cdf

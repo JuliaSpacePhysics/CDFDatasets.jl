@@ -1,7 +1,7 @@
-struct CDFVariable{T, N, A <: AbstractArray{T, N}} <: AbstractCDFVariable{T, N}
+struct CDFVariable{T, N, A <: AbstractArray{T, N}, P} <: AbstractCDFVariable{T, N}
     name::String
     data::A
-    parentdataset::CDFDataset
+    parentdataset::P
 end
 
 unwrap(x) = x
@@ -20,7 +20,7 @@ CDM.dimnames(var::CDFVariable, i::Int) = CDM.dimnames(var.data, i)
 
 cdf_type(var::CDFVariable) = cdf_type(var.data)
 
-function CDM.dimnames(var::CDFVariable)
+function CDM.dimnames(var::AbstractCDFVariable)
     if var_type(var) == "data"
         N = ndims(var.data)
         return ntuple(i -> dimnames(var, i), N)

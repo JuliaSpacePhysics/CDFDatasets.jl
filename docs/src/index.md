@@ -21,7 +21,7 @@ Here's a quick example using OMNI solar wind data:
 using CDFDatasets
 
 # Open a CDF dataset
-omni_file = joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_20240901_v01.cdf")
+omni_file = joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
 ds = CDFDataset(omni_file)
 ```
 
