@@ -28,7 +28,9 @@ function DimensionalData.dims(v::AbstractCDFVariable)
     end
 end
 
-function DimArray(v::AbstractCDFVariable)
+const SubCDFVariable = CDM.SubVariable{T, N, A} where {T, N, A <: AbstractCDFVariable}
+
+function DimArray(v::Union{AbstractCDFVariable, SubCDFVariable})
     values = parent(v)
     name = CDM.name(v)
     metadata = v.attrib

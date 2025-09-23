@@ -8,18 +8,22 @@ using DimensionalData
 
 data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
 
-@testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
-    omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
-    ds = CDFDataset(omni_file)
-    ds_py = CDFDataset(omni_file, backend = :pycdfpp)
-    @test ds isa CDFDataset
+@static if VERSION >= v"1.11"
+    using PyCDFpp
+    using PyCDFpp: UnixTime
+    @testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
+        omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
+        ds = CDFDataset(omni_file)
+        ds_py = CDFDataset(omni_file, backend = :pycdfpp)
+        @test ds isa CDFDataset
 
-    @test CDF.PyCDFpp.tt2000_to_datetime_py(ds_py.source.py["Epoch"]) == CDF.UnixTime.(ds_py["Epoch"])
-    @test Dates.DateTime.(CDF.UnixTime.(ds_py["Epoch"])) == Dates.DateTime.(ds["Epoch"])
-    @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
-        k == v
+        @test PyCDFpp.tt2000_to_datetime_py(ds_py.source.py["Epoch"]) == UnixTime.(ds_py["Epoch"])
+        @test Dates.DateTime.(UnixTime.(ds_py["Epoch"])) == Dates.DateTime.(ds["Epoch"])
+        @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
+            k == v
+        end
+        @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
     end
-    @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
 end
 
 
@@ -58,7 +62,7 @@ end
 
         var = ds["elb_pef_hs_time"]
         @test var isa CDFVariable
-        @test cdf_type(var) == CDF.CDF_TIME_TT2000
+        @test cdf_type(var) == CDF.CommonDataFormat.CDF_TIME_TT2000
         @test var_type(var) == "support_data"
         @test length(var.attrib) == length(CDM.attribnames(var))
 
