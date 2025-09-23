@@ -15,12 +15,14 @@ If True, variables' values are loaded on demand. If False, all variable values a
 """
 function CDFDataset(file::AbstractString; backend = :julia, lazy_load = true)
     @assert backend in (:pycdfpp, :julia)
-    if backend == :pycdfpp
-        return CDFDataset(PyCDFpp.load(file; lazy_load))
-    elseif backend == :julia
-        return CDFDataset(CDF.CDFDataset(file))
+    return if backend == :julia
+        CDFDataset(CDF.CDFDataset(file))
+    elseif backend == :pycdfpp
+        CDFDataset(PyCDFppDataset(file; lazy_load))
     end
 end
+
+function PyCDFppDataset end
 
 # Base interface
 Base.keys(ds::CDFDataset) = keys(ds.source)

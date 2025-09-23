@@ -8,20 +8,20 @@ CommonDataFormat = "a9737db6-c05c-4e48-868b-6bc41491d9d9"
 CommonDataModel = "1fbeeb36-5f17-413c-809b-666fb144f157"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
-UnixTimes = "ab1a18e7-b408-4913-896c-624bb82ed7f4"
 
 [weakdeps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
 
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
+CDFDatasetsPyCDFppExt = "PyCDFpp"
 
 [compat]
+CommonDataFormat = "0.1.1"
 CommonDataModel = "0.4"
 Dates = "1"
 DimensionalData = "0.29"
 DiskArrays = "0.4"
-PythonCall = "0.9"
-UnixTimes = "1.7"
+PyCDFpp = "0.1"
 julia = "1.10"

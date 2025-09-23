@@ -32,8 +32,8 @@ function py2jlvalues(var; copy = false)
         py
     end
 
-    cdftype = CDF.cdf_type(var)
-    if cdftype == CDF_TIME_TT2000
+    cdftype = py_cdf_type(var)
+    if cdftype == CDF.CDF_TIME_TT2000
         pyarr = PyArray{Int64, 1, true, false, Int64}(valid_py)
         return CDF.tt2000_to_datetime.(pyarr)
     elseif cdftype == CDF.CDF_EPOCH
@@ -43,6 +43,8 @@ function py2jlvalues(var; copy = false)
         return PyArray(valid_py; copy)
     end
 end
+
+py_cdf_type(var::Py) = pyconvert(Int, @py var.type.value)
 
 function py2jlattrib(py, name)
     at = @py py.attributes[name]
