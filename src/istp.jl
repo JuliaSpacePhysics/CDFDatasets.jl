@@ -11,3 +11,6 @@ function data_version(ds)
     end
 end
 var_type(var) = attrib(var, "VAR_TYPE")
+
+valid_min(var) = attrib(var, "VALIDMIN")
+valid_max(var) = attrib(var, "VALIDMAX")

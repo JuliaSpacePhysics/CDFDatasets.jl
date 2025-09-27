@@ -1,6 +1,6 @@
 name = "CDFDatasets"
 uuid = "075ae62b-f872-4368-b383-31e3aa6c3154"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 
 [deps]
@@ -18,7 +18,7 @@ CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
 
 [compat]
-CommonDataFormat = "0.1.1"
+CommonDataFormat = "0.1.2"
 CommonDataModel = "0.4"
 Dates = "1"
 DimensionalData = "0.29"
