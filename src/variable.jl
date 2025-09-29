@@ -40,10 +40,10 @@ function CDM.dimnames(var::AbstractCDFVariable)
     end
 end
 
-function CDM.dim(var::CDFVariable, i::Int)
+function CDM.dim(var::CDFVariable, i::Int; lazy = false)
     dname = dimnames(var, i)
     if !isnothing(dname)
-        return var.parentdataset[dname]
+        return lazy ? var.parentdataset[dname] : Array(var.parentdataset[dname])
     else
         return axes(var.data, i)
     end

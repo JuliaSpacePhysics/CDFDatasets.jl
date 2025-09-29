@@ -18,7 +18,7 @@ end
 function DiskArrays.readblock!(a::ConcatCDFVariable, aout, inds::AbstractUnitRange...)
     DiskArrays._concat_diskarray_block_io(a.data, inds...) do outer_range, array_range, I
         aout_ = outer_range == inds ? aout : view(aout, outer_range...)
-        DiskArrays.readblock!(a.data.parents[I].data, aout_, array_range...)
+        DiskArrays.readblock!(a.data.parents[I], aout_, array_range...)
     end
     return aout
 end
@@ -53,29 +53,30 @@ unwrap(var::ConcatCDFVariable) = var.data
 _parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
-function CDM.dim(var::ConcatCDFVariable, i)
+function CDM.dim(var::ConcatCDFVariable, i; lazy = false)
     parents = _parents(var)
     var0 = parents[1]
     dname = dimnames(var0, i)
     isnothing(dname) && return axes(var.data, i)
-
     dim_var1 = var0.parentdataset.source[dname]
     return if !is_record_varying(dim_var1)
-        dim_var1[:]
+        lazy ? dim_var1 : Array(dim_var1)
     else
         # TODO: handle multiple dimensions
-        out = similar(dim_var1, size(var.data, i))
-        s1 = size(dim_var1, 1)
-        DiskArrays.readblock!(dim_var1, view(out, 1:s1), 1:s1)
-        s0 = 1 + s1
-        for i in 2:length(parents)
-            dim_var = parents[i].parentdataset.source[dname]
-            sd = size(dim_var, 1)
-            out_view = view(out, s0:(s0 + sd - 1))
-            DiskArrays.readblock!(dim_var, out_view, 1:sd)
-            s0 += sd
-        end
-        return out
+        concat_dim_var = ConcatCDFVariable(map(x -> x.parentdataset.source[dname], parents))
+        lazy ? concat_dim_var : Array(concat_dim_var)
+        # out = similar(dim_var1, size(var.data, i))
+        # s1 = length(dim_var1)
+        # DiskArrays.readblock!(dim_var1, view(out, 1:s1), axes(dim_var1)...)
+        # s0 = 1 + s1
+        # @inbounds for i in 2:length(parents)
+        #     dim_var = parents[i].parentdataset.source[dname]
+        #     sd = length(dim_var)
+        #     out_view = view(out, s0:(s0 + sd - 1))
+        #     DiskArrays.readblock!(dim_var, out_view, axes(dim_var)...)
+        #     s0 += sd
+        # end
+        # return out
         # Method 1
         # mapreduce(x -> x.parentdataset.source[dname][:], vcat, parents)
 
@@ -83,3 +84,4 @@ function CDM.dim(var::ConcatCDFVariable, i)
         # return Array(DiskArrays.ConcatDiskArray(dim_vars))
     end
 end
+# 

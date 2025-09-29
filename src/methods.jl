@@ -1,5 +1,5 @@
 """Replaces fill values by NaN for `var` with float type elements."""
-function replace_fillval_by_nan!(A; verbose=false)
+function replace_fillval_by_nan!(A; verbose = false)
     T = eltype(A)
     fillval = fillvalue(T)
     if T <: AbstractFloat
@@ -11,32 +11,33 @@ function replace_fillval_by_nan!(A; verbose=false)
     return A
 end
 
-function replace_invalid!(A::AbstractVector{T}, valid_mins, valid_maxs) where T <: AbstractFloat
+function replace_invalid!(A::AbstractArray{T}, valid_mins, valid_maxs) where {T}
+    isnothing(valid_mins) && return A
+    isnothing(valid_maxs) && return A
     vmin = only(valid_mins)
     vmax = only(valid_maxs)
-    @. A = ifelse((A < vmin) | (A > vmax), T(NaN), A)
+    return @. A = ifelse((A < vmin) | (A > vmax), T(NaN), A)
 end
 
-function replace_invalid!(A, valid_mins, valid_maxs)
-    for r in eachrow(A)
+function replace_invalid!(A::AbstractMatrix{T}, valid_mins, valid_maxs) where {T}
+    nan = T(NaN)
+    isnothing(valid_mins) && return A
+    isnothing(valid_maxs) && return A
+    for (i, r) in enumerate(eachrow(A))
         vmin = get(valid_mins, i, valid_mins[1])
         vmax = get(valid_maxs, i, valid_maxs[1])
-        @. r = ifelse((r < vmin) | (r > vmax), T(NaN), r)
+        @. r = ifelse((r < vmin) | (r > vmax), nan, r)
     end
     return A
 end
 
-function replace_invalid(var::AbstractCDFVariable; verbose=false)
-    T = eltype(var)
+function sanitize(var::AbstractCDFVariable; replace_fillval = true, replace_invalid = true)
     A = Array(var)
-    if T <: AbstractFloat
+    replace_fillval && replace_fillval_by_nan!(A)
+    replace_invalid && begin
         vmins = valid_min(var)
         vmaxs = valid_max(var)
-        if !isnothing(vmins) || !isnothing(vmaxs)
-            replace_invalid!(A, vmins, vmaxs)
-        end
-    else
-        verbose && @warn "Cannot replace invalid values for Array of type $T"
+        replace_invalid!(A, vmins, vmaxs)
     end
     return A
 end
