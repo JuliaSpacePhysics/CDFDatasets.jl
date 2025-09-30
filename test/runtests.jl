@@ -98,3 +98,18 @@ end
     @test ds["label_v3c"].data == ["Ion Vx GSE    "; "Ion Vy GSE    "; "Ion Vz GSE    ";;]
     @test ds isa CDFDataset
 end
+
+@testset "CDFDataset show" begin
+    ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
+
+    # Test compact show
+    str = string(ds)
+    @test occursin("omni_coho1hr_merged_mag_plasma", str)
+    @test occursin("12 variables", str)
+
+    # Test MIME"text/plain" show
+    io = IOBuffer()
+    show(io, MIME"text/plain"(), ds)
+    str = String(take!(io))
+    @test occursin("Dataset: \nGroup: omni_coho1hr_merged_mag_plasma", str)
+end
