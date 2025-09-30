@@ -53,7 +53,7 @@ unwrap(var::ConcatCDFVariable) = var.data
 _parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
-function CDM.dim(var::ConcatCDFVariable, i; lazy = false)
+function CDM.dim(var::ConcatCDFVariable, i::Int; lazy = false)
     parents = _parents(var)
     var0 = parents[1]
     dname = dimnames(var0, i)
