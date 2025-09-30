@@ -5,20 +5,21 @@ end
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 
 """
-    CDFDataset(file; lazy_load = true)
+    CDFDataset(file; lazy = true)
 
 Load the CDF dataset at the `file` path. The dataset supports the API of the
 [JuliaGeo/CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl).
 
-`lazy_load` controls whether variable values are loaded immediately or only when accessed by the user.
+`lazy` controls whether variable values are loaded immediately or only when accessed by the user.
 If True, variables' values are loaded on demand. If False, all variable values are loaded during parsing.
 """
-function CDFDataset(file::AbstractString; backend = :julia, lazy_load = true)
-    @assert backend in (:pycdfpp, :julia)
-    return if backend == :julia
+function CDFDataset(file::AbstractString; backend = :julia, lazy = true)
+    backend = Symbol(backend)
+    @assert backend in (:julia, :PyCDFpp, :CommonDataFormat)
+    return if backend == :julia || backend == :CommonDataFormat
         CDFDataset(CDF.CDFDataset(file))
-    elseif backend == :pycdfpp
-        CDFDataset(PyCDFppDataset(file; lazy_load))
+    elseif backend == :PyCDFpp
+        CDFDataset(PyCDFppDataset(file; lazy_load = lazy))
     end
 end
 

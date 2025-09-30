@@ -19,7 +19,7 @@ end
     @testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
         omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
         ds = CDFDataset(omni_file)
-        ds_py = CDFDataset(omni_file, backend = :pycdfpp)
+        ds_py = CDFDataset(omni_file, backend = PyCDFpp)
         @test ds isa CDFDataset
 
         @test PyCDFpp.tt2000_to_datetime_py(ds_py.source.py["Epoch"]) == UnixTime.(ds_py["Epoch"])
