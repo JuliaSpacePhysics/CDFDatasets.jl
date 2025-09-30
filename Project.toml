@@ -1,6 +1,6 @@
 name = "CDFDatasets"
 uuid = "075ae62b-f872-4368-b383-31e3aa6c3154"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 
 [deps]
