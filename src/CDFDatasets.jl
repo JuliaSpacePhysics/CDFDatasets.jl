@@ -6,15 +6,16 @@ import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim
 import CommonDataModel as CDM
 using Dates
 using CommonDataFormat
-import CommonDataFormat: vattrib, fillvalue
+using CommonDataFormat: TT2000, vattrib, fillvalue
 import CommonDataFormat as CDF
+import CommonDataFormat: is_record_varying
 import DiskArrays
-using DiskArrays: @implement_cat, cat_disk
+using DiskArrays: cat_disk
 
 const CDFType = CDF.DataType
 
 export CDFDataset, CDFVariable, ConcatCDFVariable
-export tt2000_to_datetime
+export TT2000
 export CDFType, cdf_type
 export vattrib
 export is_record_varying
@@ -28,7 +29,6 @@ include("utils.jl")
 include("dataset.jl")
 include("variable.jl")
 include("istp.jl")
-include("tt2000.jl")
 include("CommonDataFormat.jl")
 include("concat.jl")
 include("subvariable.jl")

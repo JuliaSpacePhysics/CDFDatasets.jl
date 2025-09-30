@@ -31,6 +31,13 @@ function replace_invalid!(A::AbstractMatrix{T}, valid_mins, valid_maxs) where {T
     return A
 end
 
+"""
+    sanitize(var::AbstractCDFVariable; replace_fillval = true, replace_invalid = true)
+
+Load variable data as an array with fill values and invalid data replaced by `NaN`.
+
+See also: [`replace_fillval_by_nan!`](@ref)
+"""
 function sanitize(var::AbstractCDFVariable; replace_fillval = true, replace_invalid = true)
     A = Array(var)
     replace_fillval && replace_fillval_by_nan!(A)
