@@ -30,6 +30,26 @@ Base.keys(ds::CDFDataset) = keys(ds.source)
 Base.parent(ds::CDFDataset) = ds.source
 Base.getindex(ds::CDFDataset, name::String) = CDM.variable(ds, name)
 
+function Base.show(io::IO, ::MIME"text/plain", ds::AbstractCDFDataset)
+    invoke(show, Tuple{IO, AbstractDataset}, io, ds)
+end
+
+function Base.show(io::IO, ds::AbstractCDFDataset)
+    varnames_list = CDM.varnames(ds)
+    dataset_name = CDM.name(ds)
+    max_show = 12
+    print(io, dataset_name, " (", length(varnames_list), " variable")
+    length(varnames_list) != 1 && print(io, "s")
+    print(io, ": ")
+
+    if !isempty(varnames_list)
+        n_show = min(max_show, length(varnames_list))
+        print(io, join(varnames_list[1:n_show], ", "))
+        length(varnames_list) > max_show && print(io, ", \u2026")
+    end
+    print(io, ")")
+end
+
 # CommonDataModel.jl interface methods
 
 function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
@@ -37,5 +57,10 @@ function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
     return CDFVariable(_string(name), data, ds)
 end
 
+CDM.varnames(ds::CDFDataset) = CDM.varnames(ds.source)
 CDM.attribnames(ds::CDFDataset) = CDM.attribnames(ds.source)
 CDM.attrib(ds::CDFDataset, name::String) = CDM.attrib(ds.source, name)
+
+function CDM.name(ds::AbstractCDFDataset)
+    only(get(ds.attrib, "Logical_source", "/"))
+end
