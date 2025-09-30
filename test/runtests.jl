@@ -8,6 +8,11 @@ using DimensionalData
 
 data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
 
+@testset "Aqua" begin
+    using Aqua
+    Aqua.test_all(CDFDatasets)
+end
+
 @static if VERSION >= v"1.11"
     using PyCDFpp
     using PyCDFpp: UnixTime
@@ -22,7 +27,6 @@ data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
         @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
             k == v
         end
-        @test CDF.replace_invalid(ds["BR"]) isa Array
         @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
     end
 end
@@ -45,11 +49,8 @@ end
 @testset "CDFDatasets.jl (ELFIN)" begin
     # Test file path
     elx_file = data_path("elb_l2_epdef_20210914_v01.cdf")
-
+    ds = CDFDataset(elx_file)
     @testset "Basic CDF Reading" begin
-        # Create CDF reader
-        ds = CDFDataset(elx_file)
-
         @test CDF.data_version(ds) == 1
 
         # Test getting variable names
@@ -80,6 +81,12 @@ end
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
         @test is_record_varying(ds["elb_pef_energies_mean"]) == false
         @test var_type(ds["elb_pef_hs_Epat_eflux"]) == "data"
+    end
+
+    @testset "replace_invalid" begin
+        var = ds["elb_pef_hs_Epat_eflux"]
+        @test sanitize(var) isa Array
+        @test sanitize(ds["elb_pef_hs_epa_spec"]) isa Matrix
     end
 
 end

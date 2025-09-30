@@ -18,6 +18,7 @@ export tt2000_to_datetime
 export CDFType, cdf_type
 export vattrib
 export is_record_varying
+export sanitize
 
 abstract type AbstractCDFDataset <: AbstractDataset end
 abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end

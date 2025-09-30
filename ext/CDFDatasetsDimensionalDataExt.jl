@@ -28,9 +28,8 @@ function DimensionalData.dims(v::Union{AbstractCDFVariable, SubCDFVariable})
     end
 end
 
-function DimensionalData.DimArray(v::Union{AbstractCDFVariable, SubCDFVariable}; metadata = v.attrib, replace_fillval = true)
-    values = Array(v)
-    replace_fillval && CDFDatasets.replace_fillval_by_nan!(values)
+function DimensionalData.DimArray(v::Union{AbstractCDFVariable, SubCDFVariable}; metadata = v.attrib, replace_fillval = true, replace_invalid = false)
+    values = sanitize(v; replace_fillval, replace_invalid)
     name = CDM.name(v)
     return DimArray(values, dims(v); name, metadata)
 end
