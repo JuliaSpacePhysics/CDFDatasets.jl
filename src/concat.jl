@@ -3,6 +3,11 @@ struct ConcatCDFVariable{T, N, A <: AbstractArray{T, N}, MD} <: AbstractCDFVaria
     metadata::MD
 end
 
+"""
+    ConcatCDFVariable(arrays; metadata = nothing, dim = nothing)
+
+Concatenate multiple CDF variables along the `dim` dimension (by default the record dimension (last dimension)).
+"""
 function ConcatCDFVariable(arrays; metadata = nothing, dim = nothing)
     dim = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, dim)) do i
