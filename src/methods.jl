@@ -38,7 +38,7 @@ Load variable data as an array with fill values and invalid data replaced by `Na
 
 See also: [`replace_fillval_by_nan!`](@ref)
 """
-function sanitize(var::AbstractCDFVariable; replace_fillval = true, replace_invalid = true)
+function sanitize(var; replace_fillval = true, replace_invalid = true)
     A = Array(var)
     replace_fillval && replace_fillval_by_nan!(A)
     replace_invalid && begin

@@ -46,6 +46,20 @@ end
     @test CDM.dimnames(var) == CDM.dimnames(var1)
 end
 
+@testset "ConcatCDFDataset" begin
+    files = [data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"), data_path("omni_coho1hr_merged_mag_plasma_20200601_v01.cdf")]
+    ds1 = CDFDataset(files[1])
+    concat_ds = ConcatCDFDataset(files)
+
+    @test CDM.varnames(concat_ds) == CDM.varnames(ds1)
+    @test CDM.attribnames(concat_ds) == CDM.attribnames(ds1)
+    var = concat_ds["V"]
+    @test size(var) == (1464,)
+    @test var isa ConcatCDFVariable
+    @test CDM.variable(var, "V") == var
+    @test CDF.is_record_varying(var) == true
+end
+
 @testset "CDFDatasets.jl (ELFIN)" begin
     # Test file path
     elx_file = data_path("elb_l2_epdef_20210914_v01.cdf")
