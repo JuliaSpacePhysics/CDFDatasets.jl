@@ -14,10 +14,11 @@ using DiskArrays: cat_disk
 
 const CDFType = CDF.DataType
 
-export CDFDataset, CDFVariable, ConcatCDFVariable
+export CDFDataset, CDFVariable, ConcatCDFVariable, ConcatCDFDataset
 export TT2000
 export CDFType, cdf_type
 export vattrib
+export dim
 export is_record_varying
 export sanitize
 

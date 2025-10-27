@@ -20,12 +20,54 @@ function ConcatCDFVariable(arrays; metadata = nothing, dim = nothing)
 end
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
+# Like _concat_diskarray_block_io but faster
+@inline function fast_concat_diskarray_block_io(f, a, inds...)
+    # Find affected blocks and indices in blocks
+    blockinds = map(inds, a.startinds, size(a.parents)) do i, si, s
+        bi1 = max(searchsortedlast(si, first(i)), 1)
+        bi2 = min(searchsortedfirst(si, last(i) + 1) - 1, s)
+        bi1:bi2
+    end
+    for cI in CartesianIndices(blockinds)
+        myar = a.parents[cI]
+        mysize = size(myar)
+        array_range = map(cI.I, a.startinds, mysize, inds) do ii, si, ms, indstoread
+            max(first(indstoread) - si[ii] + 1, 1):min(last(indstoread) - si[ii] + 1, ms)
+        end
+        outer_range = map(cI.I, a.startinds, array_range, inds) do ii, si, ar, indstoread
+            (first(ar) + si[ii] - first(indstoread)):(last(ar) + si[ii] - first(indstoread))
+        end
+        f(outer_range, array_range, cI)
+    end
+    return
+end
+
 function DiskArrays.readblock!(a::ConcatCDFVariable, aout, inds::AbstractUnitRange...)
-    DiskArrays._concat_diskarray_block_io(a.data, inds...) do outer_range, array_range, I
-        aout_ = outer_range == inds ? aout : view(aout, outer_range...)
-        DiskArrays.readblock!(a.data.parents[I], aout_, array_range...)
+    data = a.data
+    fast_concat_diskarray_block_io(data, inds...) do outer_range, array_range, I
+        #TODO: investigate a better way to do this
+        # Method 1 (faster but allocates more)
+        aout[outer_range...] = data.parents[I][array_range...]
+        # Method 2 (slower but allocates less)
+        # if outer_range == inds
+        # Direct write to output when ranges align
+        # DiskArrays.readblock!(data.parents[I], aout, array_range...)
+        # else
+        # Only use view when ranges don't align
+        # DiskArrays.readblock!(data.parents[I], view(aout, outer_range...), array_range...)
+        # end
     end
     return aout
+end
+
+_cat(A...) = cat(A...; dims = Val(ndims(A[1])))
+
+# This provides a performance boost
+function Base.Array(var::ConcatCDFVariable)
+    vars = var.data.parents
+    dims = ndims(var)
+    f = dims == 1 ? vcat : (dims == 2 ? hcat : _cat)
+    return reduce(f, Array.(vars))
 end
 
 CDM.name(var::ConcatCDFVariable) = CDM.name(_parent1(var))
@@ -63,30 +105,22 @@ function CDM.dim(var::ConcatCDFVariable, i::Int; lazy = false)
     var0 = parents[1]
     dname = dimnames(var0, i)
     isnothing(dname) && return axes(var.data, i)
-    dim_var1 = var0.parentdataset.source[dname]
+    dim_var1 = var0.parentdataset[dname]
     return if !is_record_varying(dim_var1)
         lazy ? dim_var1 : Array(dim_var1)
     else
-        # TODO: handle multiple dimensions
-        concat_dim_var = ConcatCDFVariable(map(x -> x.parentdataset.source[dname], parents))
+        concat_dim_var = ConcatCDFVariable(map(x -> x.parentdataset[dname], parents))
         lazy ? concat_dim_var : Array(concat_dim_var)
-        # out = similar(dim_var1, size(var.data, i))
-        # s1 = length(dim_var1)
-        # DiskArrays.readblock!(dim_var1, view(out, 1:s1), axes(dim_var1)...)
-        # s0 = 1 + s1
-        # @inbounds for i in 2:length(parents)
-        #     dim_var = parents[i].parentdataset.source[dname]
-        #     sd = length(dim_var)
-        #     out_view = view(out, s0:(s0 + sd - 1))
-        #     DiskArrays.readblock!(dim_var, out_view, axes(dim_var)...)
-        #     s0 += sd
-        # end
-        # return out
-        # Method 1
-        # mapreduce(x -> x.parentdataset.source[dname][:], vcat, parents)
-
-        # Method 2
-        # return Array(DiskArrays.ConcatDiskArray(dim_vars))
     end
 end
-# 
+
+function CDM.variable(var::ConcatCDFVariable, name::String)
+    vars = map(_parents(var)) do pv
+        pv.parentdataset[name]
+    end
+    return ConcatCDFVariable(vars)
+end
+
+CDF.is_record_varying(var::ConcatCDFVariable) = is_record_varying(_parent1(var))
+
+#
