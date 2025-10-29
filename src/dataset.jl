@@ -80,6 +80,12 @@ _parent1(ds::ConcatCDFDataset) = ds.sources[1]
 CDM.varnames(ds::ConcatCDFDataset) = CDM.varnames(_parent1(ds))
 CDM.attribnames(ds::ConcatCDFDataset) = CDM.attribnames(_parent1(ds))
 CDM.attrib(ds::ConcatCDFDataset, name::String) = CDM.attrib(_parent1(ds), name)
+
 function CDM.variable(ds::ConcatCDFDataset, name::Union{String, Symbol})
-    return ConcatCDFVariable(map(x -> x[name], ds.sources))
+    var1 = _parent1(ds)[name]
+    return if is_record_varying(var1)
+        ConcatCDFVariable(map(x -> x[name], ds.sources))
+    else
+        CDFVariable(_string(name), var1, ds)
+    end
 end
