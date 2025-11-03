@@ -6,7 +6,7 @@ import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim
 import CommonDataModel as CDM
 using Dates
 using CommonDataFormat
-using CommonDataFormat: TT2000, vattrib, fillvalue
+using CommonDataFormat: TT2000, Epoch, Epoch16, vattrib, fillvalue
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
@@ -15,7 +15,7 @@ using DiskArrays: cat_disk
 const CDFType = CDF.DataType
 
 export CDFDataset, CDFVariable, ConcatCDFVariable, ConcatCDFDataset
-export TT2000
+export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export vattrib
 export dim
