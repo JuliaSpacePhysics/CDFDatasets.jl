@@ -1,11 +1,14 @@
 # CDFDatasets
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaspacephysics.github.io/CDFDatasets.jl/dev/)
 [![Build Status](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
 
 
 CDFDatasets.jl is a julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets compatible with the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface.
+
+**Installation**: at the Julia REPL, run `using Pkg; Pkg.add("CDFDatasets")`
+
+**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
 
 It provides a high-level interface with features:
 
