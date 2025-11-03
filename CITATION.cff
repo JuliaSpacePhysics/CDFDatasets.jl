@@ -7,6 +7,7 @@ authors:
     email: zijin@ucla.edu
     orcid: 0000-0002-9968-067X
 license: MIT
+doi: 10.5281/zenodo.17517175
 url: "https://github.com/JuliaSpacePhysics/CDFDatasets.jl"
 date-released: 2025
 keywords:
