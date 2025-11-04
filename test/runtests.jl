@@ -125,5 +125,6 @@ end
     io = IOBuffer()
     show(io, MIME"text/plain"(), ds)
     str = String(take!(io))
-    @test occursin("Dataset: \nGroup: omni_coho1hr_merged_mag_plasma", str)
+    @test occursin("Group: omni_coho1hr_merged_mag_plasma", str)
+    @test occursin("Data variables\n", str)
 end
