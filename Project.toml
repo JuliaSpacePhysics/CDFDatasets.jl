@@ -12,10 +12,12 @@ DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
 [weakdeps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
+SpacePhysicsMakie = "0c28ffd8-ae30-4a56-b2e4-f8332c621ad2"
 
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
+CDFDatasetsSpacePhysicsMakieExt = "SpacePhysicsMakie"
 
 [compat]
 CommonDataFormat = "0.1.2"
@@ -24,4 +26,5 @@ Dates = "1"
 DimensionalData = "0.29"
 DiskArrays = "0.4"
 PyCDFpp = "0.1"
+SpacePhysicsMakie = "0.1"
 julia = "1.10"
