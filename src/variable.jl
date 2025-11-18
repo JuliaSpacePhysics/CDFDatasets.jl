@@ -1,5 +1,5 @@
-struct CDFVariable{T, N, A <: AbstractArray{T, N}, P} <: AbstractCDFVariable{T, N}
-    name::String
+struct CDFVariable{T, N, S, A <: AbstractArray{T, N}, P} <: AbstractCDFVariable{T, N}
+    name::S
     data::A
     parentdataset::P
 end

@@ -13,6 +13,11 @@ data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
     Aqua.test_all(CDFDatasets)
 end
 
+@testset "JET" begin
+    using JET
+    JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
+end
+
 @static if VERSION >= v"1.11"
     using PyCDFpp
     using PyCDFpp: UnixTime

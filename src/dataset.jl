@@ -27,7 +27,9 @@ function CDFDataset(file::AbstractString; backend = :julia, lazy = true)
     end
 end
 
-function PyCDFppDataset end
+function PyCDFppDataset(file; kwargs...)
+    error("PyCDFppDataset requires the PyCDFpp extension. Please load PyCDFpp first.")
+end
 
 # Base interface
 Base.keys(ds::CDFDataset) = keys(ds.source)
@@ -112,7 +114,7 @@ end
 
 function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
     data = CDM.variable(ds.source, name)
-    return CDFVariable(_string(name), data, ds)
+    return CDFVariable(name, data, ds)
 end
 
 CDM.varnames(ds::CDFDataset) = CDM.varnames(ds.source)
@@ -141,6 +143,6 @@ function CDM.variable(ds::ConcatCDFDataset, name::Union{String, Symbol})
     return if is_record_varying(var1)
         ConcatCDFVariable(map(x -> x[name], ds.sources))
     else
-        CDFVariable(_string(name), var1, ds)
+        CDFVariable(name, var1, ds)
     end
 end

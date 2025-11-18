@@ -26,7 +26,6 @@ abstract type AbstractCDFDataset <: AbstractDataset end
 abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
 const SubCDFVariable = CDM.SubVariable{T, N, A} where {T, N, A <: AbstractCDFVariable}
 
-include("utils.jl")
 include("dataset.jl")
 include("variable.jl")
 include("istp.jl")
