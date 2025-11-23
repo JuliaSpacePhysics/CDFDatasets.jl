@@ -16,6 +16,7 @@ using IntervalSets: endpoints, Interval, (..)
 const CDFType = CDF.DataType
 
 export CDFDataset, CDFVariable, ConcatCDFVariable, ConcatCDFDataset
+export cdfopen
 export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export vattrib
@@ -35,4 +36,13 @@ include("CommonDataFormat.jl")
 include("concat.jl")
 include("subvariable.jl")
 include("methods.jl")
+
+"""
+    cdfopen(file; kw...) :: CDFDataset
+    cdfopen(files; kw...) :: ConcatCDFDataset
+
+Opens CDF file(s) as a `AbstractCDFDataset`.
+"""
+cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
+cdfopen(files; kw...) = ConcatCDFDataset(files; kw...)
 end

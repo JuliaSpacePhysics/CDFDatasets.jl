@@ -54,7 +54,7 @@ end
 @testset "ConcatCDFDataset" begin
     files = [data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"), data_path("omni_coho1hr_merged_mag_plasma_20200601_v01.cdf")]
     ds1 = CDFDataset(files[1])
-    concat_ds = ConcatCDFDataset(files)
+    concat_ds = cdfopen(files)
 
     @test CDM.varnames(concat_ds) == CDM.varnames(ds1)
     @test CDM.attribnames(concat_ds) == CDM.attribnames(ds1)
@@ -77,7 +77,7 @@ end
 @testset "CDFDatasets.jl (ELFIN)" begin
     # Test file path
     elx_file = data_path("elb_l2_epdef_20210914_v01.cdf")
-    ds = CDFDataset(elx_file)
+    ds = cdfopen(elx_file)
     @testset "Basic CDF Reading" begin
         @test CDF.data_version(ds) == 1
 
