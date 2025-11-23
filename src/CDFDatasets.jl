@@ -4,13 +4,13 @@ using CommonDataModel
 using CommonDataModel: AbstractDataset, AbstractVariable
 import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim
 import CommonDataModel as CDM
-using Dates
 using CommonDataFormat
 using CommonDataFormat: TT2000, Epoch, Epoch16, vattrib, fillvalue
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
-using DiskArrays: cat_disk
+using DiskArrays: cat_disk, getindex_disk
+using IntervalSets: endpoints, Interval, (..)
 
 const CDFType = CDF.DataType
 
@@ -21,6 +21,7 @@ export vattrib
 export dim
 export is_record_varying
 export sanitize
+export ..
 
 abstract type AbstractCDFDataset <: AbstractDataset end
 abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
