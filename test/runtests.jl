@@ -63,6 +63,15 @@ end
     @test var isa ConcatCDFVariable
     @test CDM.variable(var, "V") == var
     @test CDF.is_record_varying(var) == true
+
+
+    @testset "SubVariable" begin
+        t0 = DateTime(2020, 05, 03)
+        t1 = DateTime(2020, 05, 04)
+        subvar = var[t0 .. t1]
+        @test size(subvar) == (25,)
+        @test DimArray(subvar).dims[1] ⊆ t0 .. t1
+    end
 end
 
 @testset "CDFDatasets.jl (ELFIN)" begin

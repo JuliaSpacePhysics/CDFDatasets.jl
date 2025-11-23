@@ -10,7 +10,7 @@ CDFDatasets.jl is a julia package to read [Common Data Format (CDF)](https://cdf
 
 **Installation**: at the Julia REPL, run `using Pkg; Pkg.add("CDFDatasets")`
 
-**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
+**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
 
 It provides a high-level interface with features:
 
