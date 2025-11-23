@@ -72,11 +72,8 @@ end
 
 CDM.name(var::ConcatCDFVariable) = CDM.name(_parent1(var))
 function CDM.attribnames(var::ConcatCDFVariable)
-    if isnothing(var.metadata)
-        return CDM.attribnames(_parent1(var))
-    else
-        return keys(var.metadata)
-    end
+    names = CDM.attribnames(_parent1(var))
+    return isnothing(var.metadata) ? names : union(names, keys(var.metadata))
 end
 
 function CDM.attrib(var::ConcatCDFVariable, name::String)
@@ -99,23 +96,11 @@ unwrap(var::ConcatCDFVariable) = var.data
 _parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
-function CDM.dim(var::ConcatCDFVariable, i::Int; lazy = false)
-    parents = _parents(var)
-    var0 = parents[1]
-    dname = dimnames(var0, i)
-    isnothing(dname) && return axes(var.data, i)
-    dim_var1 = var0.parentdataset[dname]
-    return if !is_record_varying(dim_var1)
-        lazy ? dim_var1 : Array(dim_var1)
-    else
-        concat_dim_var = ConcatCDFVariable(map(x -> x.parentdataset[dname], parents))
-        lazy ? concat_dim_var : Array(concat_dim_var)
-    end
-end
-
 function CDM.variable(var::ConcatCDFVariable, name::String)
     vars = map(_parents(var)) do pv
         pv.parentdataset[name]
     end
     return ConcatCDFVariable(vars)
 end
+
+CDM.dataset(var::ConcatCDFVariable) = ConcatCDFDataset(dataset.(var.data.parents))

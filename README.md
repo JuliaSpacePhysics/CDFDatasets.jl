@@ -1,6 +1,7 @@
 # CDFDatasets
 
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
+[![version](https://juliahub.com/docs/General/CDFDatasets/stable/version.svg)](https://juliahub.com/ui/Packages/General/CDFDatasets)
 
 [![Build Status](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
