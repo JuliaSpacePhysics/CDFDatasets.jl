@@ -120,9 +120,10 @@ function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
     return CDFVariable(name, data, ds)
 end
 
-CDM.varnames(ds::CDFDataset) = CDM.varnames(ds.source)
-CDM.attribnames(ds::CDFDataset) = CDM.attribnames(ds.source)
-CDM.attrib(ds::CDFDataset, name::String) = CDM.attrib(ds.source, name)
+_parent1(ds::CDFDataset) = ds.source
+CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
+CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
+CDM.attrib(ds::AbstractCDFDataset, name::String) = CDM.attrib(_parent1(ds), name)
 CDM.path(ds::CDFDataset) = CDM.path(ds.source)
 
 function CDM.name(ds::AbstractCDFDataset)
@@ -136,9 +137,6 @@ function ConcatCDFDataset(sources::AbstractVector{<:AbstractString}; backend = :
 end
 
 _parent1(ds::ConcatCDFDataset) = ds.sources[1]
-CDM.varnames(ds::ConcatCDFDataset) = CDM.varnames(_parent1(ds))
-CDM.attribnames(ds::ConcatCDFDataset) = CDM.attribnames(_parent1(ds))
-CDM.attrib(ds::ConcatCDFDataset, name::String) = CDM.attrib(_parent1(ds), name)
 CDM.path(ds::ConcatCDFDataset) = CDM.path.(ds.sources)
 
 function CDM.variable(ds::ConcatCDFDataset, name::Union{String, Symbol})

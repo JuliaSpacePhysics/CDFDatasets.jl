@@ -5,6 +5,7 @@ CurrentModule = CDFDatasets
 # CDFDatasets
 
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
+[![version](https://juliahub.com/docs/General/CDFDatasets/stable/version.svg)](https://juliahub.com/ui/Packages/General/CDFDatasets)
 
 CDFDatasets.jl is a Julia package for reading [CDF (Common Data Format)](https://cdf.gsfc.nasa.gov/) files, commonly used in space physics and other scientific domains. It provides a Julia interface to CDF files using the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface. See [CDF reader benchmarks](https://juliaspacephysics.github.io/tutorials/cdf) for comparison with other CDF readers.
 

@@ -24,8 +24,6 @@ CDM.attribnames(var::CDFVariable) = CDM.attribnames(var.data)
 CDM.attrib(var::CDFVariable) = CDM.attrib(var.data)
 CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var.data, name)
 CDM.dimnames(var::AbstractCDFVariable, i::Int) = dimnames(_parent1(var), i)
-CDM.parentdataset(var::CDFVariable) = var.parentdataset
-
 
 function CDM.dimnames(var::AbstractCDFVariable)
     if var_type(var) == "data"
@@ -36,14 +34,21 @@ function CDM.dimnames(var::AbstractCDFVariable)
     end
 end
 
-function CDM.dim(var::CDFVariable, i::Int; lazy = false)
+function CDM.dim(var::AbstractCDFVariable, i::Int; lazy = false)
+    i == ndims(var) && "DEPEND_TIME" in attribnames(var) && return depend_time(var; lazy)
     dname = dimnames(var, i)
-    if !isnothing(dname)
-        return lazy ? var.parentdataset[dname] : Array(var.parentdataset[dname])
-    else
-        return axes(var.data, i)
-    end
+    isnothing(dname) && return axes(var.data, i)
+    dvar = dataset(var)[dname]
+    return lazy ? dvar : Array(dvar)
 end
 
 cdf_type(var::AbstractCDFVariable) = cdf_type(_parent1(var))
 CDF.is_record_varying(var::AbstractCDFVariable) = is_record_varying(_parent1(var))
+
+# https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
+function depend_time(var; lazy = false)
+    @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
+    dname = attrib(var, "DEPEND_TIME")
+    dimvar = dataset(var)[dname]
+    return unix2datetime.(lazy ? dimvar : Array(dimvar))
+end
