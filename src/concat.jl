@@ -71,7 +71,6 @@ function Base.Array(var::ConcatCDFVariable)
 end
 
 CDM.name(var::ConcatCDFVariable) = CDM.name(_parent1(var))
-CDM.dimnames(var::ConcatCDFVariable, i::Int) = dimnames(_parent1(var), i)
 function CDM.attribnames(var::ConcatCDFVariable)
     if isnothing(var.metadata)
         return CDM.attribnames(_parent1(var))
@@ -120,7 +119,3 @@ function CDM.variable(var::ConcatCDFVariable, name::String)
     end
     return ConcatCDFVariable(vars)
 end
-
-CDF.is_record_varying(var::ConcatCDFVariable) = is_record_varying(_parent1(var))
-
-#
