@@ -25,7 +25,7 @@ using CDFDatasets
 
 # Open a CDF dataset
 omni_file = joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
-ds = CDFDataset(omni_file)
+ds = cdfopen(omni_file)
 ```
 
 Explore the dataset

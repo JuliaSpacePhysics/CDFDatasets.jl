@@ -28,7 +28,7 @@ It is recommended to use the native Julia implementation `CommonDataFormat.jl` f
 using CDFDatasets
 
 # Open a CDF file
-ds = CDFDataset("omni_coho1hr_merged_mag_plasma_20250901_v01.cdf")
+ds = cdfopen("omni_coho1hr_merged_mag_plasma_20250901_v01.cdf")
 times = ds["Epoch"]
 bx = ds["BR"]
 ```
