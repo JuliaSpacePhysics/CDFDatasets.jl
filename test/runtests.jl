@@ -5,8 +5,21 @@ import CDFDatasets as CDF
 import CDFDatasets.CommonDataModel as CDM
 using Dates
 using DimensionalData
+using Downloads
 
 data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
+
+# Download test data from URL and cache locally
+function download_test_data(url, filename = basename(url))
+    cache_dir = joinpath(pkgdir(CDFDatasets), "test", "data")
+    mkpath(cache_dir)
+    filepath = joinpath(cache_dir, filename)
+    if !isfile(filepath)
+        @info "Downloading test data: $filename"
+        Downloads.download(url, filepath)
+    end
+    return filepath
+end
 
 @testset "Aqua" begin
     using Aqua
@@ -36,6 +49,11 @@ end
     end
 end
 
+@testset "CDFDataset (Edge cases)" begin
+    tha_state_url = "https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/download/v0.1.8/tha_l1_state_20100225_v03.cdf"
+    ds = cdfopen(download_test_data(tha_state_url))
+    @test eltype(CDM.dim(ds["tha_pos"], 2)) <: Dates.AbstractDateTime
+end
 
 @testset "ConcatCDFVariable and DimArray" begin
     file1 = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
@@ -117,6 +135,7 @@ end
         subvar = var[t0 .. t1]
         @test size(subvar) == (10, 16, 22)
         @test size(CDM.dim(subvar, 1)) == (10, 22)
+        @test size(CDM.dim(subvar, 2)) == (16, 1)
     end
 
     @testset "replace_invalid" begin

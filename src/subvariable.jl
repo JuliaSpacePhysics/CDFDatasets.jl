@@ -1,5 +1,3 @@
-unwrap(var::SubCDFVariable) = var.v
-
 function CDM.dim(var::SubCDFVariable, i::Int)
     dvar = CDM.dim(parent(var), i)
     indices = parentindices(var)[ndims(var)]
