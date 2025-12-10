@@ -34,11 +34,17 @@ function CDM.dimnames(var::AbstractCDFVariable)
     end
 end
 
-function CDM.dim(var::AbstractCDFVariable, i::Int; lazy = false)
-    i == ndims(var) && "DEPEND_TIME" in attribnames(var) && return depend_time(var; lazy)
+is_virtual(var) = var.attrib["VIRTUAL"] == "TRUE"
+
+function CDM.dim(var::AbstractCDFVariable, i::Int)
     dname = dimnames(var, i)
     isnothing(dname) && return axes(var.data, i)
-    return dataset(var)[dname]
+    dvar = dataset(var)[dname]
+    return if i == ndims(var) && is_virtual(dvar) && "DEPEND_TIME" in attribnames(var)
+        depend_time(var)
+    else
+        dvar
+    end
 end
 
 cdf_type(var::AbstractCDFVariable) = cdf_type(_parent1(var))
