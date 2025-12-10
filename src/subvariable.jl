@@ -1,8 +1,13 @@
 unwrap(var::SubCDFVariable) = var.v
 
 function CDM.dim(var::SubCDFVariable, i::Int)
-    indices = parentindices(var)[i]
-    return CDM.dim(parent(var), i; lazy = true)[indices]
+    dvar = CDM.dim(parent(var), i)
+    indices = parentindices(var)[ndims(var)]
+    return if is_record_varying(dvar)
+        selectdim(dvar, ndims(dvar), indices)
+    else
+        dvar
+    end
 end
 
 function find_indices(var, t0, t1)
