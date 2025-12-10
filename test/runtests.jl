@@ -74,8 +74,7 @@ end
     end
 end
 
-@testset "CDFDatasets.jl (ELFIN)" begin
-    # Test file path
+@testset "CDFDatasets.jl (Multidimensional, ELFIN)" begin
     elx_file = data_path("elb_l2_epdef_20210914_v01.cdf")
     ds = cdfopen(elx_file)
     @testset "Basic CDF Reading" begin
@@ -109,6 +108,15 @@ end
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
         @test is_record_varying(ds["elb_pef_energies_mean"]) == false
         @test var_type(ds["elb_pef_hs_Epat_eflux"]) == "data"
+    end
+
+    @testset "SubVariable" begin
+        t0 = DateTime("2021-09-14T16:23:44.432")
+        t1 = DateTime("2021-09-14T16:27:35.676")
+        var = ds["elb_pef_hs_Epat_eflux"]
+        subvar = var[t0 .. t1]
+        @test size(subvar) == (10, 16, 22)
+        @test size(CDM.dim(subvar, 1)) == (10, 22)
     end
 
     @testset "replace_invalid" begin

@@ -38,8 +38,7 @@ function CDM.dim(var::AbstractCDFVariable, i::Int; lazy = false)
     i == ndims(var) && "DEPEND_TIME" in attribnames(var) && return depend_time(var; lazy)
     dname = dimnames(var, i)
     isnothing(dname) && return axes(var.data, i)
-    dvar = dataset(var)[dname]
-    return lazy ? dvar : Array(dvar)
+    return dataset(var)[dname]
 end
 
 cdf_type(var::AbstractCDFVariable) = cdf_type(_parent1(var))

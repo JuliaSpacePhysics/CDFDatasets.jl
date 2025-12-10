@@ -23,7 +23,7 @@ end
 
 function DimensionalData.dims(v::Union{AbstractCDFVariable, SubCDFVariable})
     return ntuple(ndims(v)) do i
-        depend = CDM.dim(v, i)
+        depend = Array(CDM.dim(v, i))
         format_dim(v, depend, i)
     end
 end
