@@ -94,13 +94,24 @@ end
     @testset "Dataset view (time clip)" begin
         t0 = DateTime(2020, 05, 03)
         t1 = DateTime(2020, 05, 04)
-        vds = view(concat_ds, t0 .. t1)
-        @test vds["V"] == concat_ds["V"][t0 .. t1]
+        vds = view(ds1, t0 .. t1)
+        @test Array(vds["Epoch"])[1] == t0
+        @test vds["V"] == ds1["V"][t0 .. t1]
         @test DimArray(vds["V"]).dims[1] ⊆ t0 .. t1
 
         str = sprint(show, MIME("text/plain"), vds)
         @test occursin("View:", str)
     end
+
+    # TODO: address memory allocation concerns for view operations
+    # julia> @b Array(vds["Epoch"])
+    # 2.073 μs (24 allocs: 13.656 KiB)
+    # julia> @b Array(ds1["Epoch"])
+    # 1.023 μs (13 allocs: 7.141 KiB)
+    # julia> @b Array(vds["V"])
+    # 3.990 μs (49 allocs: 15.688 KiB)
+    # julia> @b Array(ds1["V"])
+    # 979.167 ns (13 allocs: 4.141 KiB)
 end
 
 @testset "CDFDatasets.jl (Multidimensional, ELFIN)" begin

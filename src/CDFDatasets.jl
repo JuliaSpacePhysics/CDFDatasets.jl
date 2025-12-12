@@ -6,7 +6,7 @@ import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, 
 import CommonDataModel as CDM
 using CommonDataFormat
 using CommonDataFormat: TT2000, Epoch, Epoch16, vattrib, fillvalue
-using Dates: unix2datetime
+using Dates: unix2datetime, AbstractDateTime
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
