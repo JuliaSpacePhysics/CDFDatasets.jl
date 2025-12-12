@@ -129,13 +129,14 @@ function Base.show(io::IO, ds::AbstractCDFDataset)
 end
 
 # CommonDataModel.jl interface methods
+const SymbolString = Union{String, Symbol}
 
-function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
+function CDM.variable(ds::CDFDataset, name::SymbolString)
     data = CDM.variable(ds.source, name)
     return CDFVariable(name, data, ds)
 end
 
-function CDM.variable(ds::ClippedCDFDataset, name::Union{String, Symbol})
+function CDM.variable(ds::ClippedCDFDataset, name::SymbolString)
     var = CDM.variable(parent(ds), name)
     return is_record_varying(var) ? var[ds.interval] : var
 end
@@ -143,9 +144,9 @@ end
 _parent1(ds::AbstractCDFDataset) = parent(ds)
 CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
 CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
-CDM.attrib(ds::AbstractCDFDataset, name::String) = CDM.attrib(_parent1(ds), name)
-CDM.path(ds::AbstractCDFDataset) = CDM.path(parent(ds))
+CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_parent1(ds), name)
 
+CDM.path(ds::AbstractCDFDataset) = CDM.path(parent(ds))
 function CDM.name(ds::AbstractCDFDataset)
     return only(get(ds.attrib, "Logical_source", "/"))
 end
@@ -159,7 +160,7 @@ end
 _parent1(ds::ConcatCDFDataset) = ds.sources[1]
 CDM.path(ds::ConcatCDFDataset) = CDM.path.(ds.sources)
 
-function CDM.variable(ds::ConcatCDFDataset, name::Union{String, Symbol})
+function CDM.variable(ds::ConcatCDFDataset, name::SymbolString)
     var1 = _parent1(ds)[name]
     return if is_record_varying(var1)
         ConcatCDFVariable(map(x -> x[name], ds.sources))
