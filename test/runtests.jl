@@ -97,6 +97,9 @@ end
         vds = view(concat_ds, t0 .. t1)
         @test vds["V"] == concat_ds["V"][t0 .. t1]
         @test DimArray(vds["V"]).dims[1] ⊆ t0 .. t1
+
+        str = sprint(show, MIME("text/plain"), vds)
+        @test occursin("View:", str)
     end
 end
 

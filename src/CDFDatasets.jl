@@ -22,14 +22,16 @@ export CDFType, cdf_type
 export vattrib
 export dim
 export is_record_varying
-export sanitize
+export sanitize, fillvalue
 export ..
+export variable
 
 abstract type AbstractCDFDataset <: AbstractDataset end
 abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
 const SubCDFVariable = CDM.SubVariable{T, N, A} where {T, N, A <: AbstractCDFVariable}
 
 include("dataset.jl")
+include("show.jl")
 include("variable.jl")
 include("istp.jl")
 include("CommonDataFormat.jl")
