@@ -90,6 +90,14 @@ end
         @test size(subvar) == (25,)
         @test DimArray(subvar).dims[1] ⊆ t0 .. t1
     end
+
+    @testset "Dataset view (time clip)" begin
+        t0 = DateTime(2020, 05, 03)
+        t1 = DateTime(2020, 05, 04)
+        vds = view(concat_ds, t0 .. t1)
+        @test vds["V"] == concat_ds["V"][t0 .. t1]
+        @test DimArray(vds["V"]).dims[1] ⊆ t0 .. t1
+    end
 end
 
 @testset "CDFDatasets.jl (Multidimensional, ELFIN)" begin

@@ -1,7 +1,7 @@
 function CDM.dim(var::SubCDFVariable, i::Int)
     dvar = CDM.dim(parent(var), i)
-    indices = parentindices(var)[ndims(var)]
-    return if is_record_varying(dvar)
+    return if dvar isa AbstractCDFVariable && is_record_varying(dvar)
+        indices = parentindices(var)[ndims(var)]
         selectdim(dvar, ndims(dvar), indices)
     else
         dvar

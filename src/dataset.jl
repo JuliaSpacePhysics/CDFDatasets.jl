@@ -6,6 +6,11 @@ struct ConcatCDFDataset{A} <: AbstractCDFDataset
     sources::A
 end
 
+struct ClippedCDFDataset{D, I} <: AbstractCDFDataset
+    parent::D
+    interval::I
+end
+
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 
 """
@@ -35,9 +40,12 @@ function PyCDFppDataset(file; kwargs...)
 end
 
 # Base interface
-Base.keys(ds::CDFDataset) = keys(ds.source)
 Base.parent(ds::CDFDataset) = ds.source
 Base.getindex(ds::AbstractCDFDataset, name::String) = CDM.variable(ds, name)
+
+Base.parent(ds::ClippedCDFDataset) = ds.parent
+Base.view(ds::AbstractCDFDataset, interval::Interval) =
+    ClippedCDFDataset(ds, interval)
 
 function Base.show(io::IO, ::MIME"text/plain", ds::AbstractCDFDataset)
     # return invoke(show, Tuple{IO, AbstractDataset}, io, ds)
@@ -96,6 +104,13 @@ function _show(io::IO, ds::AbstractCDFDataset)
     return
 end
 
+function _show(io::IO, ds::ClippedCDFDataset)
+    level = get(io, :level, 0)
+    indent = " "^level
+    print(io, indent, "View: ", ds.interval, "\n")
+    return _show(io, parent(ds))
+end
+
 function Base.show(io::IO, ds::AbstractCDFDataset)
     varnames_list = CDM.varnames(ds)
     dataset_name = CDM.name(ds)
@@ -120,11 +135,16 @@ function CDM.variable(ds::CDFDataset, name::Union{String, Symbol})
     return CDFVariable(name, data, ds)
 end
 
-_parent1(ds::CDFDataset) = ds.source
+function CDM.variable(ds::ClippedCDFDataset, name::Union{String, Symbol})
+    var = CDM.variable(parent(ds), name)
+    return is_record_varying(var) ? var[ds.interval] : var
+end
+
+_parent1(ds::AbstractCDFDataset) = parent(ds)
 CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
 CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
 CDM.attrib(ds::AbstractCDFDataset, name::String) = CDM.attrib(_parent1(ds), name)
-CDM.path(ds::CDFDataset) = CDM.path(ds.source)
+CDM.path(ds::AbstractCDFDataset) = CDM.path(parent(ds))
 
 function CDM.name(ds::AbstractCDFDataset)
     return only(get(ds.attrib, "Logical_source", "/"))
