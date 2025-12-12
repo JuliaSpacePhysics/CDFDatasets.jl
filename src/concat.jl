@@ -77,10 +77,10 @@ function CDM.attribnames(var::ConcatCDFVariable)
 end
 
 function CDM.attrib(var::ConcatCDFVariable, name::String)
-    if isnothing(var.metadata)
-        return CDM.attrib(_parent1(var), name)
+    return if isnothing(var.metadata)
+        CDM.attrib(_parent1(var), name)
     else
-        return var.metadata[name]
+        var.metadata[name]
     end
 end
 
