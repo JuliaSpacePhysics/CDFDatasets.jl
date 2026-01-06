@@ -46,5 +46,12 @@ include("methods.jl")
 Opens CDF file(s) as a `AbstractCDFDataset`.
 """
 cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
-cdfopen(files; kw...) = ConcatCDFDataset(files; kw...)
+function cdfopen(files; backend = :julia, kw...)
+    backend = Symbol(backend)
+    @assert backend in (:julia, :CommonDataFormat)
+    return ConcatCDFDataset(CDF.CDFDataset.(files))
+end
+
+CDM.Dimensions(var::AbstractCDFVariable) = ntuple(i -> dim(var, i), ndims(var))
+
 end
