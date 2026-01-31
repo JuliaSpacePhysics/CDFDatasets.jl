@@ -4,7 +4,7 @@ version = "0.1.11"
 authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 
 [workspace]
-projects = ["docs"]
+projects = ["docs", "test"]
 
 [deps]
 CommonDataFormat = "a9737db6-c05c-4e48-868b-6bc41491d9d9"

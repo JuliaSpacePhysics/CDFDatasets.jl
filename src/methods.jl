@@ -1,7 +1,6 @@
 """Replaces fill values by NaN for `var` with float type elements."""
-function replace_fillval_by_nan!(A; verbose = false)
+function replace_fillval_by_nan!(A, fillval; verbose = false)
     T = eltype(A)
-    fillval = fillvalue(T)
     if T <: AbstractFloat
         nan = T(NaN)
         replace!(A, fillval => nan)
@@ -40,7 +39,11 @@ See also: [`replace_fillval_by_nan!`](@ref)
 """
 function sanitize(var; replace_fillval = true, replace_invalid = true)
     A = Array(var)
-    replace_fillval && replace_fillval_by_nan!(A)
+    T = eltype(A)
+    replace_fillval && begin
+        fillval = T(only(@something var.attrib["FILLVAL"] fillvalue(T)))
+        replace_fillval_by_nan!(A, fillval)
+    end
     replace_invalid && begin
         vmins = valid_min(var)
         vmaxs = valid_max(var)
