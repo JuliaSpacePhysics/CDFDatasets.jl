@@ -26,9 +26,14 @@ end
     Aqua.test_all(CDFDatasets)
 end
 
-@testset "JET" begin
-    using JET
-    JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
+const RUN_JET_TESTS = isempty(VERSION.prerelease)
+
+if RUN_JET_TESTS
+    using Pkg; Pkg.add("JET"); Pkg.instantiate()
+    @testset "JET static analysis" begin
+        using JET
+        JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
+    end
 end
 
 @static if VERSION >= v"1.11"
