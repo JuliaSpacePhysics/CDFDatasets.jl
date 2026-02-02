@@ -1,7 +1,7 @@
 module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
-using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable, SubCDFVariable, unwrap
+using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable, SubCDFVariable
 import CommonDataModel as CDM
 using DimensionalData
 import DimensionalData: DimArray

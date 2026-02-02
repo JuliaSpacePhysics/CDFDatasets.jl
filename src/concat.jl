@@ -92,7 +92,6 @@ function Base.cat(A1::ConcatCDFVariable, As::CDFVariable...; dims)
     return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing)
 end
 
-unwrap(var::ConcatCDFVariable) = var.data
 _parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
