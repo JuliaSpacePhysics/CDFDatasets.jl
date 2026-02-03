@@ -5,21 +5,9 @@ import CDFDatasets as CDF
 import CDFDatasets.CommonDataModel as CDM
 using Dates
 using DimensionalData
-using Downloads
+using Chairmarks
 
-data_path(fname) = joinpath(pkgdir(CDFDatasets), "data", fname)
-
-# Download test data from URL and cache locally
-function download_test_data(url, filename = basename(url))
-    cache_dir = joinpath(pkgdir(CDFDatasets), "test", "data")
-    mkpath(cache_dir)
-    filepath = joinpath(cache_dir, filename)
-    if !isfile(filepath)
-        @info "Downloading test data: $filename"
-        Downloads.download(url, filepath)
-    end
-    return filepath
-end
+include("utils.jl")
 
 @testset "Aqua" begin
     using Aqua
@@ -75,6 +63,8 @@ end
 end
 
 @testset "ConcatCDFDataset" begin
+    using DimensionalData
+
     files = [data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"), data_path("omni_coho1hr_merged_mag_plasma_20200601_v01.cdf")]
     ds1 = CDFDataset(files[1])
     concat_ds = cdfopen(files)
@@ -94,18 +84,20 @@ end
         subvar = var[t0 .. t1]
         @test size(subvar) == (25,)
         @test DimArray(subvar).dims[1] ⊆ t0 .. t1
+        @test (@b DimArray(subvar)).time < (@b DimArray(var)).time
     end
 
     @testset "Dataset view (time clip)" begin
         t0 = DateTime(2020, 05, 03)
         t1 = DateTime(2020, 05, 04)
-        vds = view(ds1, t0 .. t1)
+        vds = view(concat_ds, t0 .. t1)
         @test Array(vds["Epoch"])[1] == t0
-        @test vds["V"] == ds1["V"][t0 .. t1]
+        @test vds["V"] == concat_ds["V"][t0 .. t1]
         @test DimArray(vds["V"]).dims[1] ⊆ t0 .. t1
 
         str = sprint(show, MIME("text/plain"), vds)
         @test occursin("View:", str)
+        @test_broken (@b DimArray($vds["V"])).time < (@b DimArray($concat_ds["V"])).time
     end
 
     # TODO: address memory allocation concerns for view operations
