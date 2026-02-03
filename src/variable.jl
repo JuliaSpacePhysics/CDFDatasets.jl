@@ -27,11 +27,11 @@ CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var.data, name)
 CDM.dimnames(var::AbstractCDFVariable, i::Int) = dimnames(_parent1(var), i)
 
 function CDM.dimnames(var::AbstractCDFVariable)
-    if var_type(var) == "data"
+    return if var_type(var) == "data"
         N = ndims(var.data)
-        return ntuple(i -> dimnames(var, i), N)
+        ntuple(i -> dimnames(var, i), N)
     else
-        return ()
+        ()
     end
 end
 
