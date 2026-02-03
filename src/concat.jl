@@ -1,6 +1,7 @@
-struct ConcatCDFVariable{T, N, A <: AbstractArray{T, N}, MD} <: AbstractCDFVariable{T, N}
+struct ConcatCDFVariable{T, N, A <: AbstractArray{T, N}, MD, D} <: AbstractCDFVariable{T, N}
     data::A
     metadata::MD
+    parentdataset::D
 end
 
 """
@@ -8,15 +9,14 @@ end
 
 Concatenate multiple CDF variables along the `dim` dimension (by default the record dimension (last dimension)).
 """
-function ConcatCDFVariable(arrays; metadata = nothing, dim = nothing)
+function ConcatCDFVariable(arrays; metadata = nothing, dim = nothing, parentdataset = nothing)
     dim = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, dim)) do i
         i == dim ? length(arrays) : 1
     end
     cdas = reshape(arrays, sz)
     data = DiskArrays.ConcatDiskArray(cdas)
-    # data = cat_disk(dim, arrays...)
-    return ConcatCDFVariable(data, metadata)
+    return ConcatCDFVariable(data, metadata, parentdataset)
 end
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
@@ -85,21 +85,21 @@ function CDM.attrib(var::ConcatCDFVariable, name::String)
 end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing)
+    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing, nothing)
 end
 
 function Base.cat(A1::ConcatCDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing)
+    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing, nothing)
 end
 
 _parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
 function CDM.variable(var::ConcatCDFVariable, name::String)
-    vars = map(_parents(var)) do pv
-        pv.parentdataset[name]
-    end
-    return ConcatCDFVariable(vars)
+    return variable(dataset(var), name)
 end
 
-CDM.dataset(var::ConcatCDFVariable) = ConcatCDFDataset(dataset.(var.data.parents))
+@inline function CDM.dataset(var::ConcatCDFVariable)
+    ds = getfield(var, :parentdataset)
+    return isnothing(ds) ? ConcatCDFDataset(dataset.(var.data.parents)) : ds
+end
