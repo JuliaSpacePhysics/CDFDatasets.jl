@@ -5,11 +5,27 @@ struct CDFVariable{T, N, S, A <: AbstractArray{T, N}, P, MD} <: AbstractCDFVaria
     metadata::MD
 end
 
-unwrap(x) = x
-unwrap(var::AbstractCDFVariable) = var.data
+struct MaterializedCDFVariable{T, N, A <: AbstractArray{T, N}, P, MD} <: AbstractArray{T, N}
+    name::String
+    data::A
+    parentdataset::P
+    metadata::MD
+end
+
+const CDFVariableLike = Union{AbstractCDFVariable, MaterializedCDFVariable}
 
 Base.parent(var::AbstractCDFVariable) = var.data
-Base.size(var::AbstractCDFVariable) = size(var.data)
+Base.size(var::CDFVariableLike) = size(var.data)
+
+function Base.getindex(var::MaterializedCDFVariable, I...)
+    result = getindex(var.data, I...)
+    return result isa AbstractArray ?
+        MaterializedCDFVariable(var.name, result, var.parentdataset, var.metadata) : result
+end
+Base.view(var::MaterializedCDFVariable, I...) =
+    MaterializedCDFVariable(var.name, view(var.data, I...), var.parentdataset, var.metadata)
+Base.reshape(var::MaterializedCDFVariable, dims::Dims) =
+    MaterializedCDFVariable(var.name, reshape(var.data, dims), var.parentdataset, var.metadata)
 
 function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
     return DiskArrays.readblock!(a.data, aout, inds...)
@@ -19,11 +35,11 @@ DiskArrays.eachchunk(var::CDFVariable) = DiskArrays.eachchunk(var.data)
 
 _parent1(var::CDFVariable) = var.data
 
-CDM.name(var::CDFVariable) = var.name
-CDM.dataset(var::CDFVariable) = var.parentdataset
-CDM.attribnames(var::CDFVariable) = CDM.attribnames(var.data)
-CDM.attrib(var::CDFVariable) = CDM.attrib(var.data)
-CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var.data, name)
+CDM.name(var::CDFVariableLike) = var.name
+CDM.dataset(var::CDFVariableLike) = var.parentdataset
+CDM.attribnames(var::CDFVariableLike) = keys(var.metadata)
+CDM.attrib(var::CDFVariableLike) = var.metadata
+CDM.attrib(var::Union{AbstractCDFVariable, MaterializedCDFVariable}, name::String) = var.metadata[name]
 CDM.dimnames(var::AbstractCDFVariable, i::Int) = dimnames(_parent1(var), i)
 
 function CDM.dimnames(var::AbstractCDFVariable)
@@ -35,7 +51,15 @@ function CDM.dimnames(var::AbstractCDFVariable)
     end
 end
 
-is_virtual(var) = var.attrib["VIRTUAL"] == "TRUE"
+"""
+    materialize(var)::MaterializedCDFVariable
+
+Load the variable data from disk into memory.
+"""
+materialize(var) =
+    MaterializedCDFVariable(CDM.name(var), Array(var), CDM.dataset(var), var.metadata)
+
+is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 
 function CDM.dim(var::AbstractCDFVariable, i::Int)
     dname = dimnames(var, i)

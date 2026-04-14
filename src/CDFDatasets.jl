@@ -5,24 +5,23 @@ using CommonDataModel: AbstractDataset, AbstractVariable
 import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, dataset
 import CommonDataModel as CDM
 using CommonDataFormat
-using CommonDataFormat: TT2000, Epoch, Epoch16, vattrib, fillvalue
+using CommonDataFormat: TT2000, Epoch, Epoch16, fillvalue
 using Dates: unix2datetime, AbstractDateTime
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
-using DiskArrays: cat_disk, getindex_disk
+using DiskArrays: cat_disk, getindex_disk, AbstractDiskArray
 using IntervalSets: endpoints, Interval, (..)
 
 const CDFType = CDF.DataType
 
-export CDFDataset, CDFVariable, ConcatCDFVariable, ConcatCDFDataset
+export CDFDataset, CDFVariable, MaterializedCDFVariable, ConcatCDFVariable, ConcatCDFDataset
 export cdfopen
 export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
-export vattrib
 export dim
 export is_record_varying
-export sanitize, fillvalue
+export sanitize, fillvalue, materialize
 export ..
 export variable
 
