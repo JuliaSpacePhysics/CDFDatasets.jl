@@ -75,13 +75,8 @@ function CDM.attribnames(var::ConcatCDFVariable)
     names = CDM.attribnames(_parent1(var))
     return isnothing(var.metadata) ? names : union(names, keys(var.metadata))
 end
-
 function CDM.attrib(var::ConcatCDFVariable, name::String)
-    return if isnothing(var.metadata)
-        CDM.attrib(_parent1(var), name)
-    else
-        var.metadata[name]
-    end
+    return isnothing(var.metadata) ? CDM.attrib(_parent1(var), name) : var.metadata[name]
 end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)

@@ -1,7 +1,7 @@
 module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
-using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable, SubCDFVariable
+using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable, SubCDFVariable, materialize
 import CommonDataModel as CDM
 using DimensionalData
 import DimensionalData: DimArray
@@ -14,7 +14,7 @@ dimtype(::Val{3}) = Z
 function format_dim(data, dimvar, i)
     DT = i == ndims(data) ? Ti : dimtype(Val(i))
     values = if length(dimvar) == size(data, i)
-        vec(Array(dimvar))
+        vec(materialize(dimvar))
     else
         axes(data, i)
     end
