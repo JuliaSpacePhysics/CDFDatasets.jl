@@ -16,18 +16,20 @@ end
 
 const RUN_JET_TESTS = isempty(VERSION.prerelease)
 
-if RUN_JET_TESTS
-    using Pkg; Pkg.add("JET"); Pkg.instantiate()
-    @testset "JET static analysis" begin
+@testset "JET static analysis" begin
+    if RUN_JET_TESTS
+        using Pkg; Pkg.add("JET"); Pkg.instantiate()
         using JET
         JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
     end
 end
 
-@static if VERSION >= v"1.11"
-    using PyCDFpp
-    using PyCDFpp: UnixTime
-    @testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
+
+@testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
+    @static if VERSION >= v"1.11"
+        using PyCDFpp
+        using PyCDFpp: UnixTime
+
         omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
         ds = CDFDataset(omni_file)
         ds_py = CDFDataset(omni_file, backend = PyCDFpp)
