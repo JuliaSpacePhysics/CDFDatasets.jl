@@ -9,7 +9,7 @@ end
 
 Concatenate multiple CDF variables along the `dim` dimension (by default the record dimension (last dimension)).
 """
-function ConcatCDFVariable(arrays; metadata = nothing, dim = nothing, parentdataset = nothing)
+function ConcatCDFVariable(arrays; metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
     dim = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, dim)) do i
         i == dim ? length(arrays) : 1
@@ -71,20 +71,13 @@ function Base.Array(var::ConcatCDFVariable)
 end
 
 CDM.name(var::ConcatCDFVariable) = CDM.name(_parent1(var))
-function CDM.attribnames(var::ConcatCDFVariable)
-    names = CDM.attribnames(_parent1(var))
-    return isnothing(var.metadata) ? names : union(names, keys(var.metadata))
-end
-function CDM.attrib(var::ConcatCDFVariable, name::String)
-    return isnothing(var.metadata) ? CDM.attrib(_parent1(var), name) : var.metadata[name]
-end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing, nothing)
+    return ConcatCDFVariable(cat_disk(dims, A1, As...), A1.metadata, nothing)
 end
 
 function Base.cat(A1::ConcatCDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), nothing, nothing)
+    return ConcatCDFVariable(cat_disk(dims, A1, As...), A1.metadata, nothing)
 end
 
 _parents(var) = var.data.parents
