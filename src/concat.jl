@@ -1,4 +1,5 @@
-struct ConcatCDFVariable{T, N, A <: AbstractArray{T, N}, MD, D} <: AbstractCDFVariable{T, N}
+struct ConcatCDFVariable{T, N, S, A <: AbstractArray{T, N}, MD, D} <: AbstractCDFVariable{T, N}
+    name::S
     data::A
     metadata::MD
     parentdataset::D
@@ -9,14 +10,14 @@ end
 
 Concatenate multiple CDF variables along the `dim` dimension (by default the record dimension (last dimension)).
 """
-function ConcatCDFVariable(arrays; metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
+function ConcatCDFVariable(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
     dim = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, dim)) do i
         i == dim ? length(arrays) : 1
     end
     cdas = reshape(arrays, sz)
     data = DiskArrays.ConcatDiskArray(cdas)
-    return ConcatCDFVariable(data, metadata, parentdataset)
+    return ConcatCDFVariable(name, data, metadata, parentdataset)
 end
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
@@ -70,17 +71,14 @@ function Base.Array(var::ConcatCDFVariable)
     return reduce(f, Array.(vars))
 end
 
-CDM.name(var::ConcatCDFVariable) = CDM.name(_parent1(var))
-
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), A1.metadata, nothing)
+    return ConcatCDFVariable(A1.name, cat_disk(dims, A1, As...), A1.metadata, nothing)
 end
 
 function Base.cat(A1::ConcatCDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(cat_disk(dims, A1, As...), A1.metadata, nothing)
+    return ConcatCDFVariable(A1.name, cat_disk(dims, A1, As...), A1.metadata, nothing)
 end
 
-_parents(var) = var.data.parents
 _parent1(var) = var.data.parents[1]
 
 function CDM.variable(var::ConcatCDFVariable, name::String)
