@@ -10,7 +10,7 @@ function data_version(ds)
         return parse(Int, only(dv))
     end
 end
-var_type(var) = attrib(var, "VAR_TYPE")
+var_type(var) = get(var.attrib, "VAR_TYPE", "")
 
 valid_min(var) = attrib(var, "VALIDMIN")
 valid_max(var) = attrib(var, "VALIDMAX")

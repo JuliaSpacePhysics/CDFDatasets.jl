@@ -9,5 +9,5 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[sources.PyCDFpp]
-path = "../lib/PyCDFpp.jl"
+[sources]
+PyCDFpp = {path = "../lib/PyCDFpp.jl"}
