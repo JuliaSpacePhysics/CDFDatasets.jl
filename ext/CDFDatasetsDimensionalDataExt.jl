@@ -14,7 +14,7 @@ dimtype(::Val{3}) = Z
 function format_dim(data, dimvar, i)
     DT = i == ndims(data) ? Ti : dimtype(Val(i))
     values = if length(dimvar) == size(data, i)
-        vec(materialize(dimvar))
+        dimvar isa AbstractCDFVariable ? vec(materialize(dimvar)) : dimvar
     else
         axes(data, i)
     end
