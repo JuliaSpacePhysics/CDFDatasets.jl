@@ -189,4 +189,14 @@ end
     str = String(take!(io))
     @test occursin("Group: omni_coho1hr_merged_mag_plasma", str)
     @test occursin("Data variables\n", str)
+
+    # Test limited MIME"text/plain" show
+    io = IOBuffer()
+    show(IOContext(io, :limit => true), MIME"text/plain"(), ds)
+    str = String(take!(io))
+    @test occursin("28 attributes: Project, Discipline", str)
+    @test occursin("Global attributes\n", str)
+
+    str = sprint(show, ds["BR"]; context = :limit => true)
+    @test str == "BR (744) dims=Epoch [BR (RTN); nT]"
 end

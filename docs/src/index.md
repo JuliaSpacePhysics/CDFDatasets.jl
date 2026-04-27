@@ -42,6 +42,7 @@ Access variables
 ds["Epoch"]
 ds["Epoch"][[1,end]]
 ds["BR"]
+ds["BR"].attrib
 ```
 
 ```@example omni
