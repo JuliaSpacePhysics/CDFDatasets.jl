@@ -15,7 +15,7 @@ using IntervalSets: endpoints, Interval, (..)
 
 const CDFType = CDF.DataType
 
-export CDFDataset, CDFVariable, ConcatCDFDataset
+export CDFDataset, CDFVariable
 export cdfopen
 export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
@@ -40,7 +40,7 @@ include("show.jl")
 
 """
     cdfopen(file; kw...) :: CDFDataset
-    cdfopen(files; kw...) :: ConcatCDFDataset
+    cdfopen(files; kw...) :: CDFDataset
 
 Opens CDF file(s) as a `AbstractCDFDataset`.
 """
@@ -48,7 +48,7 @@ cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
 function cdfopen(files; backend = :julia, kw...)
     backend = Symbol(backend)
     @assert backend in (:julia, :CommonDataFormat)
-    return ConcatCDFDataset(CDF.CDFDataset.(files))
+    return CDFDataset(CDF.CDFDataset.(files))
 end
 
 CDM.Dimensions(var::AbstractCDFVariable) = ntuple(i -> dim(var, i), ndims(var))

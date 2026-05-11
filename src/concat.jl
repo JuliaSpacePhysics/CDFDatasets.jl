@@ -1,4 +1,4 @@
-function _concat_cdf_variable(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
+function _concat_variables(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
     d = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, d)) do i
         i == d ? length(arrays) : 1
@@ -56,17 +56,10 @@ function Base.Array(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where 
 end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return _concat_cdf_variable((A1, As...); dim = dims)
+    return _concat_variables((A1, As...); dim = dims)
 end
 
 @inline function CDM.dataset(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where {T, N}
     ds = var.parentdataset
-    return isnothing(ds) ? _concat_dataset(var.data.parents) : ds
-end
-
-_concat_dataset(vars) = ConcatCDFDataset(map(CDM.dataset, vars))
-
-function _concat_dataset(vars...)
-    sources = map(CDM.dataset, vars)
-    return ConcatCDFDataset(sources)
+    return isnothing(ds) ? CDFDataset(CDM.dataset.(var.data.parents)) : ds
 end

@@ -61,6 +61,10 @@ function _show(io::IO, ds::AbstractCDFDataset)
         return
     end
 
+    if ds isa CDFDataset && _has_interval(ds)
+        print(io, indent, "View: ", ds.interval, "\n")
+    end
+
     printstyled(io, indent, "Dataset: ", CDM.path(ds), "\n", color = CDM.section_color[])
 
     print(io, indent, "Group: ", CDM.name(ds), "\n")
@@ -99,13 +103,6 @@ function _show(io::IO, ds::AbstractCDFDataset)
         end
     end
     return
-end
-
-function _show(io::IO, ds::ClippedCDFDataset)
-    level = get(io, :level, 0)
-    indent = " "^level
-    print(io, indent, "View: ", ds.interval, "\n")
-    return _show(io, parent(ds))
 end
 
 function Base.show(io::IO, ds::AbstractCDFDataset)
