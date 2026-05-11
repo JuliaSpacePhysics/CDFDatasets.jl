@@ -95,7 +95,10 @@ end
         vds = view(concat_ds, t0 .. t1)
         @test Array(vds["Epoch"])[1] == t0
         @test vds["V"] == concat_ds["V"][t0 .. t1]
-        @test DimArray(vds["V"]).dims[1] ⊆ t0 .. t1
+        da = DimArray(vds["V"])
+        @test da.dims[1] ⊆ t0 .. t1
+        @test parent(da) isa Array  # data materialized
+        @test parent(dims(da)[1].val) isa Vector  # dim materialized
 
         str = sprint(show, MIME("text/plain"), vds)
         @test occursin("View:", str)
@@ -175,28 +178,5 @@ end
     @test ds isa CDFDataset
 end
 
-@testset "CDFDataset show" begin
     ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
-
-    # Test compact show
-    str = string(ds)
-    @test occursin("omni_coho1hr_merged_mag_plasma", str)
-    @test occursin("12 variables", str)
-
-    # Test MIME"text/plain" show
-    io = IOBuffer()
-    show(io, MIME"text/plain"(), ds)
-    str = String(take!(io))
-    @test occursin("Group: omni_coho1hr_merged_mag_plasma", str)
-    @test occursin("Data variables\n", str)
-
-    # Test limited MIME"text/plain" show
-    io = IOBuffer()
-    show(IOContext(io, :limit => true), MIME"text/plain"(), ds)
-    str = String(take!(io))
-    @test occursin("28 attributes: Project, Discipline", str)
-    @test occursin("Global attributes\n", str)
-
-    str = sprint(show, ds["BR"]; context = :limit => true)
-    @test str == "BR (744) dims=Epoch [BR (RTN); nT]"
-end
+include("test_show.jl")

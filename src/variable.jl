@@ -58,6 +58,8 @@ Load the variable data from disk into memory.
 """
 materialize(var) =
     MaterializedCDFVariable(CDM.name(var), Array(var), CDM.dataset(var), var.metadata)
+materialize(var::SubCDFVariable) =
+    MaterializedCDFVariable(CDM.name(var), Array(var), CDM.dataset(var), CDM.attrib(parent(var)))
 
 is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 

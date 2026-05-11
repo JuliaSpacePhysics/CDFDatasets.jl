@@ -19,8 +19,8 @@ function _show_limited(io::IO, var::AbstractCDFVariable)
     indent = " "^level
     delim = " × "
     attrs = CDM.attrib(var)
-    units = get(attrs, "UNITS", "")
-    field = get(attrs, "FIELDNAM", get(attrs, "CATDESC", ""))
+    units = strip(get(attrs, "UNITS", ""))
+    field = get(attrs, "CATDESC", get(attrs, "FIELDNAM", ""))
 
     printstyled(io, indent, CDM.name(var), color = CDM.variable_color[])
     print(io, " (", join(size(var), delim), ")")
