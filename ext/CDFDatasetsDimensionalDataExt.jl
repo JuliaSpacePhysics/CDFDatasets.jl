@@ -13,11 +13,11 @@ dimtype(::Val{3}) = Z
 # handle multi-dimensional DEPENDs
 function format_dim(data, dimvar, i)
     DT = i == ndims(data) ? Ti : dimtype(Val(i))
-    values = if length(dimvar) == size(data, i)
-        dimvar isa AbstractCDFVariable ? vec(materialize(dimvar)) : dimvar
-    else
-        axes(data, i)
+    if dimvar isa Union{AbstractCDFVariable, SubCDFVariable} && length(dimvar) == size(data, i)
+        mat = materialize(dimvar)
+        return DT(vec(mat.data); metadata = mat.metadata)
     end
+    values = length(dimvar) == size(data, i) ? dimvar : axes(data, i)
     return DT(values)
 end
 
