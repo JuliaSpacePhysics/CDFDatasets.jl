@@ -11,6 +11,8 @@ function CDM.attrib(var::PyCDF, name::String)
     return pyconvert(Vector{String}, pylist(attr))
 end
 
+CDM.path(var::PyCDF) = ""
+CDM.varnames(ds::PyCDF) = py2jlkeys(ds.py)
 
 function CDM.variable(ds::PyCDF, name::Union{String, Symbol, Py})
     ds_py = ds.py
@@ -21,7 +23,7 @@ end
 
 CDM.attrib(var::PyCDFVariable, name::String) = py2jlattrib(var.py, name)
 
-CDM.attrib(var::PyCDFVariable) = @py var.py.attributes
+CDM.attrib(var::PyCDFVariable) = PyDictWrapper(var.py."attributes")
 
 function CDM.dimnames(var::PyCDFVariable, i::Int)
     key = if i == 1

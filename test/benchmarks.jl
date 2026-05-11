@@ -22,7 +22,7 @@ subvar = var[t0 .. t1]
 vds = view(concat_ds, t0 .. t1)
 
 # DimArray creation benchmarks
-@info "full ConcatCDFVariable" (@b DimArray($var))
+@info "full concatenated CDFVariable" (@b DimArray($var))
 @info "SubVariable (time-clipped)" @b DimArray($subvar)
 
 @info "from CDFDataset" @b DimArray($concat_ds["V"])

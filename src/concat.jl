@@ -1,24 +1,18 @@
-struct ConcatCDFVariable{T, N, S, A <: AbstractArray{T, N}, MD, D} <: AbstractCDFVariable{T, N}
-    name::S
-    data::A
-    metadata::MD
-    parentdataset::D
-end
-
-"""
-    ConcatCDFVariable(arrays; metadata = nothing, dim = nothing)
-
-Concatenate multiple CDF variables along the `dim` dimension (by default the record dimension (last dimension)).
-"""
-function ConcatCDFVariable(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
-    dim = @something dim ndims(first(arrays))
-    sz = map(ntuple(identity, dim)) do i
-        i == dim ? length(arrays) : 1
+function _concat_cdf_variable(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
+    d = @something dim ndims(first(arrays))
+    sz = map(ntuple(identity, d)) do i
+        i == d ? length(arrays) : 1
     end
-    cdas = reshape(arrays, sz)
-    data = DiskArrays.ConcatDiskArray(cdas)
-    return ConcatCDFVariable(name, data, metadata, parentdataset)
+    cdas = reshape(_as_array(arrays), sz)
+    data = DiskArrays.ConcatDiskArray(_storage_parent.(cdas))
+    return CDFVariable(data, name, parentdataset, metadata)
 end
+
+_as_array(arrays::AbstractArray) = arrays
+_as_array(arrays) = collect(arrays)
+
+_storage_parent(var::CDFVariable) = parent(var)
+_storage_parent(data) = data
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
 # Like _concat_diskarray_block_io but faster
@@ -43,49 +37,36 @@ end
     return
 end
 
-function DiskArrays.readblock!(a::ConcatCDFVariable, aout, inds::AbstractUnitRange...)
+function DiskArrays.readblock!(a::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}, aout, inds::AbstractUnitRange...) where {T, N}
     data = a.data
     fast_concat_diskarray_block_io(data, inds...) do outer_range, array_range, I
-        #TODO: investigate a better way to do this
-        # Method 1 (faster but allocates more)
         aout[outer_range...] = data.parents[I][array_range...]
-        # Method 2 (slower but allocates less)
-        # if outer_range == inds
-        # Direct write to output when ranges align
-        # DiskArrays.readblock!(data.parents[I], aout, array_range...)
-        # else
-        # Only use view when ranges don't align
-        # DiskArrays.readblock!(data.parents[I], view(aout, outer_range...), array_range...)
-        # end
     end
     return aout
 end
 
 _cat(A...) = cat(A...; dims = Val(ndims(A[1])))
 
-# This provides a performance boost
-function Base.Array(var::ConcatCDFVariable)
+# Performance boost over generic DiskArrays path
+function Base.Array(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where {T, N}
     vars = var.data.parents
-    dims = ndims(var)
-    f = dims == 1 ? vcat : (dims == 2 ? hcat : _cat)
+    d = ndims(var)
+    f = d == 1 ? vcat : (d == 2 ? hcat : _cat)
     return reduce(f, Array.(vars))
 end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(A1.name, cat_disk(dims, A1, As...), A1.metadata, nothing)
+    return _concat_cdf_variable((A1, As...); dim = dims)
 end
 
-function Base.cat(A1::ConcatCDFVariable, As::CDFVariable...; dims)
-    return ConcatCDFVariable(A1.name, cat_disk(dims, A1, As...), A1.metadata, nothing)
+@inline function CDM.dataset(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where {T, N}
+    ds = var.parentdataset
+    return isnothing(ds) ? _concat_dataset(var.data.parents) : ds
 end
 
-_parent1(var) = var.data.parents[1]
+_concat_dataset(vars) = ConcatCDFDataset(map(CDM.dataset, vars))
 
-function CDM.variable(var::ConcatCDFVariable, name::String)
-    return variable(dataset(var), name)
-end
-
-@inline function CDM.dataset(var::ConcatCDFVariable)
-    ds = getfield(var, :parentdataset)
-    return isnothing(ds) ? ConcatCDFDataset(dataset.(var.data.parents)) : ds
+function _concat_dataset(vars...)
+    sources = map(CDM.dataset, vars)
+    return ConcatCDFDataset(sources)
 end

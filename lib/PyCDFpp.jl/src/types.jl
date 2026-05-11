@@ -21,3 +21,11 @@ for f in (:getindex,)
 end
 
 Base.getindex(ds::PyCDF, name::String) = CDM.variable(ds, name)
+
+struct PyDictWrapper
+    py::Py
+end
+
+Base.getindex(d::PyDictWrapper, key) = d.py[key]
+Base.get(d::PyDictWrapper, key, default::String) = pyconvert(String, get(d.py, key, default).value)
+Base.keys(d::PyDictWrapper) = py2jlkeys(d.py)

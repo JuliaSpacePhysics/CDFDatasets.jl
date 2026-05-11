@@ -1,7 +1,7 @@
 module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
-using CDFDatasets: CDFVariable, ConcatCDFVariable, AbstractCDFVariable, SubCDFVariable, materialize
+using CDFDatasets: CDFVariable, AbstractCDFVariable, materialize
 import CommonDataModel as CDM
 using DimensionalData
 import DimensionalData: DimArray
@@ -13,7 +13,7 @@ dimtype(::Val{3}) = Z
 # handle multi-dimensional DEPENDs
 function format_dim(data, dimvar, i)
     DT = i == ndims(data) ? Ti : dimtype(Val(i))
-    if dimvar isa Union{AbstractCDFVariable, SubCDFVariable} && length(dimvar) == size(data, i)
+    if dimvar isa AbstractCDFVariable && length(dimvar) == size(data, i)
         mat = materialize(dimvar)
         return DT(vec(mat.data); metadata = mat.metadata)
     end
@@ -21,14 +21,14 @@ function format_dim(data, dimvar, i)
     return DT(values)
 end
 
-function DimensionalData.dims(v::Union{AbstractCDFVariable, SubCDFVariable})
+function DimensionalData.dims(v::AbstractCDFVariable)
     return ntuple(ndims(v)) do i
         depend = CDM.dim(v, i)
         format_dim(v, depend, i)
     end
 end
 
-function DimensionalData.DimArray(v::Union{AbstractCDFVariable, SubCDFVariable}; metadata = v.attrib, replace_fillval = true, replace_invalid = false)
+function DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib, replace_fillval = true, replace_invalid = false)
     values = sanitize(v; replace_fillval, replace_invalid)
     name = CDM.name(v)
     return DimArray(values, dims(v); name, metadata)

@@ -29,11 +29,6 @@ const ELFIN_FLUX_MATERIALIZED = materialize(ELFIN_FLUX)
 const CLIP = DateTime(2020, 5, 3) .. DateTime(2020, 5, 4)
 const OMNI_MULTI_VIEW = view(OMNI_MULTI, CLIP)
 
-SUITE["variable"] = BenchmarkGroup()
-SUITE["variable"]["disk"] = BenchmarkGroup()
-SUITE["variable"]["materialized"] = BenchmarkGroup()
-SUITE["variable"]["materialize"] = BenchmarkGroup()
-
 SUITE["variable"]["disk"]["sum"] = @benchmarkable sum($ELFIN_FLUX)
 SUITE["variable"]["disk"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX)
 SUITE["variable"]["disk"]["broadcast-realized"] = @benchmarkable Array($ELFIN_FLUX .* 2)
@@ -45,25 +40,18 @@ SUITE["variable"]["materialized"]["broadcast"] = @benchmarkable $ELFIN_FLUX_MATE
 SUITE["variable"]["materialize"]["omni-v"] = @benchmarkable materialize($OMNI_V)
 SUITE["variable"]["materialize"]["elfin-flux"] = @benchmarkable materialize($ELFIN_FLUX)
 
-SUITE["concat"] = BenchmarkGroup()
-SUITE["concat"]["variable"] = BenchmarkGroup()
-SUITE["concat"]["dataset"] = BenchmarkGroup()
-
 SUITE["concat"]["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
 SUITE["concat"]["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
 SUITE["concat"]["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]
 SUITE["concat"]["dataset"]["epoch"] = @benchmarkable $OMNI_MULTI["Epoch"]
 
-SUITE["clip"] = BenchmarkGroup()
 SUITE["clip"]["variable"] = @benchmarkable $OMNI_MULTI_V[$CLIP]
 SUITE["clip"]["dataset-variable"] = @benchmarkable $OMNI_MULTI_VIEW["V"]
 SUITE["clip"]["dataset-epoch"] = @benchmarkable Array($OMNI_MULTI_VIEW["Epoch"])
 
-SUITE["dimarray"] = BenchmarkGroup()
 SUITE["dimarray"]["single"] = @benchmarkable DimArray($OMNI_V)
 SUITE["dimarray"]["concat"] = @benchmarkable DimArray($OMNI_MULTI_V)
 SUITE["dimarray"]["clip"] = @benchmarkable DimArray($OMNI_MULTI_VIEW["V"])
 
-SUITE["metadata"] = BenchmarkGroup()
 SUITE["metadata"]["dim"] = @benchmarkable CommonDataModel.dim($OMNI_MULTI_V, 1)
 SUITE["metadata"]["dataset"] = @benchmarkable CommonDataModel.dataset($OMNI_MULTI_V)
