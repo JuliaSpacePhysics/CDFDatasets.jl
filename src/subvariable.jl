@@ -1,13 +1,3 @@
-function CDM.dim(var::SubCDFVariable, i::Int)
-    dvar = CDM.dim(parent(var), i)
-    return if (dvar isa AbstractCDFVariable && is_record_varying(dvar)) || (eltype(dvar) <: AbstractDateTime)
-        indices = parentindices(var)[ndims(var)]
-        selectdim(dvar, ndims(dvar), indices)
-    else
-        dvar
-    end
-end
-
 function find_indices(tdim::Vector, t0, t1)
     return if issorted(tdim)
         searchsortedfirst(tdim, t0):searchsortedlast(tdim, t1)
@@ -16,7 +6,7 @@ function find_indices(tdim::Vector, t0, t1)
     end
 end
 
-function DiskArrays.getindex_disk(var::AbstractCDFVariable{T}, interval::Interval) where {T}
+function DiskArrays.getindex_disk(var::CDFVariable{T}, interval::Interval) where {T}
     t0, t1 = endpoints(interval)
     # Handle the case where the data itself is the dimension variable
     return if T <: AbstractDateTime

@@ -3,6 +3,7 @@ using CDFDatasets: var_type, cdf_type
 using Test
 import CDFDatasets as CDF
 import CDFDatasets.CommonDataModel as CDM
+import CDFDatasets.DiskArrays
 using Dates
 using DimensionalData
 using Chairmarks
@@ -41,6 +42,13 @@ end
             k == v
         end
         @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
+
+        @testset "py show" begin
+            io = IOBuffer()
+            show(io, MIME"text/plain"(), ds_py)
+            str = String(take!(io))
+            @test occursin("Support variables: Epoch", str)
+        end
     end
 end
 
@@ -50,14 +58,15 @@ end
     @test eltype(CDM.dim(ds["tha_pos"], 2)) <: Dates.AbstractDateTime
 end
 
-@testset "ConcatCDFVariable and DimArray" begin
+@testset "Concatenated CDFVariable and DimArray" begin
     file1 = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
     file2 = data_path("omni_coho1hr_merged_mag_plasma_20200601_v01.cdf")
     var1 = CDFDataset(file1)["V"]
     var2 = CDFDataset(file2)["V"]
     var = cat(var1, var2; dims = 1)
-    @test var == ConcatCDFVariable([var1, var2])
-    @test var isa ConcatCDFVariable
+    @test var == cat(var1, var2; dims = 1)
+    @test var.data isa DiskArrays.ConcatDiskArray
+    @test var.data.parents[1] === parent(var1)
     @test var.data == vcat(var1.data, var2.data)
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
@@ -75,7 +84,7 @@ end
     @test CDM.attribnames(concat_ds) == CDM.attribnames(ds1)
     var = concat_ds["V"]
     @test size(var) == (1464,)
-    @test var isa ConcatCDFVariable
+    @test var.data isa DiskArrays.ConcatDiskArray
     @test CDM.variable(var, "V") == var
     @test CDF.is_record_varying(var) == true
 
@@ -178,5 +187,55 @@ end
     @test ds isa CDFDataset
 end
 
+@testset "Materialized CDFVariable array operations" begin
+    within(actual, baseline; factor) = actual.time <= baseline.time * factor
+    within(pair; factor) = within(pair...; factor)
+
     ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
+    disk_var = ds["V"]
+    var = materialize(disk_var)
+    data = parent(var)
+
+    @test data isa Array
+
+    @test_broken cdf_type(var) == cdf_type(disk_var)
+    @test disk_var .* 2 isa DiskArrays.BroadcastDiskArray
+    @test CDM.dimnames(var) == CDM.dimnames(disk_var)
+    @test CDM.dimnames(var, 1) == CDM.dimnames(disk_var, 1)
+    @test var[1] == data[1]
+    @test sum(var) == sum(data)
+    @test maximum(var) == maximum(data)
+    @test copy(var) == data
+    @test var .* 2 == data .* 2
+    @test var .* 2 isa Array
+
+    @testset "Performance" begin
+        @test within(@b sum($var), sum($data); factor = 1.1)
+        @test within(@b maximum($var), maximum($data); factor = 1.1)
+        @test within(@b copy($var), copy($data); factor = 1.1)
+        @test_broken within(@b $var .* 2, $data .* 2; factor = 1.1)
+    end
+end
+
+@testset "CDFVariable array operation performance" begin
+    ds = CDFDataset(data_path("elb_l2_epdef_20210914_v01.cdf"))
+    disk_var = ds["elb_pef_hs_Epat_eflux"]
+    mem_var = materialize(disk_var)
+
+    disk_sum = @b(sum($disk_var))
+    mem_sum = @b(sum($mem_var))
+    @test mem_sum.time < disk_sum.time
+    @test mem_sum.bytes < disk_sum.bytes
+    @test mem_sum.bytes == 0
+
+    disk_maximum = @b(maximum($disk_var))
+    mem_maximum = @b(maximum($mem_var))
+    @test mem_maximum.time < disk_maximum.time
+    @test mem_maximum.bytes < disk_maximum.bytes
+    @test mem_maximum.bytes == 0
+    disk_broadcast = @b(Array($disk_var .* 2))
+    mem_broadcast = @b($mem_var .* 2)
+    @test mem_broadcast.bytes < disk_broadcast.bytes
+end
+
 include("test_show.jl")

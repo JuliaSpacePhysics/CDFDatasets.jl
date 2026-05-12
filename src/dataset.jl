@@ -52,7 +52,7 @@ const SymbolString = Union{String, Symbol}
 
 function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
     data = CDM.variable(ds.source, name)
-    return CDFVariable(name, data, ds, @something metadata CDM.attrib(data))
+    return CDFVariable(data, name, ds, @something metadata CDM.attrib(data))
 end
 
 function CDM.variable(ds::ClippedCDFDataset, name::SymbolString)
@@ -84,8 +84,8 @@ function CDM.variable(ds::ConcatCDFDataset, name::SymbolString; metadata = nothi
     var1 = ds1[name]
     md = @something metadata CDM.attrib(var1)
     return if is_record_varying(var1)
-        ConcatCDFVariable(map(x -> x[name], ds.sources); metadata = md, parentdataset = ds)
+        _concat_cdf_variable(map(x -> x[name], ds.sources); metadata = md, parentdataset = ds)
     else
-        CDFVariable(name, var1, ds1, md)
+        CDFVariable(var1, name, ds, md)
     end
 end

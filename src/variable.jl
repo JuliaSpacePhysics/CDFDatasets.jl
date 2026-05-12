@@ -1,69 +1,65 @@
-struct CDFVariable{T, N, S, A <: AbstractArray{T, N}, P, MD} <: AbstractCDFVariable{T, N}
+struct CDFVariable{T, N, A <: AbstractArray{T, N}, S, P, MD} <: AbstractCDFVariable{T, N}
+    data::A
     name::S
-    data::A
     parentdataset::P
     metadata::MD
 end
 
-struct MaterializedCDFVariable{T, N, A <: AbstractArray{T, N}, P, MD} <: AbstractArray{T, N}
-    name::String
-    data::A
-    parentdataset::P
-    metadata::MD
-end
+Base.parent(var::CDFVariable) = var.data
+Base.size(var::CDFVariable) = size(var.data)
 
-const CDFVariableLike = Union{AbstractCDFVariable, MaterializedCDFVariable}
 
-Base.parent(var::AbstractCDFVariable) = var.data
-Base.size(var::CDFVariableLike) = size(var.data)
+rebuild(var, data) = CDFVariable(data, var.name, var.parentdataset, var.metadata)
 
-function Base.getindex(var::MaterializedCDFVariable, I...)
-    result = getindex(var.data, I...)
-    return result isa AbstractArray ?
-        MaterializedCDFVariable(var.name, result, var.parentdataset, var.metadata) : result
-end
-Base.view(var::MaterializedCDFVariable, I...) =
-    MaterializedCDFVariable(var.name, view(var.data, I...), var.parentdataset, var.metadata)
-Base.reshape(var::MaterializedCDFVariable, dims::Dims) =
-    MaterializedCDFVariable(var.name, reshape(var.data, dims), var.parentdataset, var.metadata)
+Base.view(var::CDFVariable, I...) = rebuild(var, view(var.data, I...))
+Base.reshape(var::CDFVariable, dims::Dims) = rebuild(var, reshape(var.data, dims))
 
 function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
-    return DiskArrays.readblock!(a.data, aout, inds...)
+    d = a.data
+    if d isa AbstractDiskArray
+        DiskArrays.readblock!(d, aout, inds...)
+    else
+        copyto!(aout, view(d, inds...))
+    end
+    return aout
 end
 
-DiskArrays.eachchunk(var::CDFVariable) = DiskArrays.eachchunk(var.data)
+DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
+    DiskArrays.eachchunk(var.data)
 
-_parent1(var::CDFVariable) = var.data
+CDM.name(var::CDFVariable) = var.name
+CDM.dataset(var::CDFVariable) = var.parentdataset
+CDM.attribnames(var::CDFVariable) = keys(var.metadata)
+CDM.attrib(var::CDFVariable) = var.metadata
+CDM.attrib(var::CDFVariable, name::String) = var.metadata[name]
+CDM.variable(var::CDFVariable, name::String) = variable(dataset(var), name)
 
-CDM.name(var::CDFVariableLike) = var.name
-CDM.dataset(var::CDFVariableLike) = var.parentdataset
-CDM.attribnames(var::CDFVariableLike) = keys(var.metadata)
-CDM.attrib(var::CDFVariableLike) = var.metadata
-CDM.attrib(var::Union{AbstractCDFVariable, MaterializedCDFVariable}, name::String) = var.metadata[name]
-CDM.dimnames(var::AbstractCDFVariable, i::Int) = dimnames(_parent1(var), i)
+_parent1(data) = data
+_parent1(data::CDFVariable) = _parent1(data.data)
+_parent1(data::DiskArrays.ConcatDiskArray) = _parent1(data.parents[1])
+_parent1(data::Union{SubArray, DiskArrays.SubDiskArray}) = _parent1(parent(data))
 
-function CDM.dimnames(var::AbstractCDFVariable)
+function CDM.dimnames(var::CDFVariable, i::Int)
+    data = _parent1(var)
+    return data isa Array ? _dataset_dimname(var, i) : dimnames(data, i)
+end
+
+function _dataset_dimname(var::CDFVariable, i::Int)
+    source_var = variable(dataset(var), CDM.name(var))
+    return dimnames(source_var, i)
+end
+
+function CDM.dimnames(var::CDFVariable)
     return if var_type(var) == "data"
-        N = ndims(var.data)
-        ntuple(i -> dimnames(var, i), N)
+        ntuple(i -> dimnames(var, i), ndims(var))
     else
         ()
     end
 end
 
-"""
-    materialize(var)::MaterializedCDFVariable
-
-Load the variable data from disk into memory.
-"""
-materialize(var) =
-    MaterializedCDFVariable(CDM.name(var), Array(var), CDM.dataset(var), var.metadata)
-materialize(var::SubCDFVariable) =
-    MaterializedCDFVariable(CDM.name(var), Array(var), CDM.dataset(var), CDM.attrib(parent(var)))
-
 is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 
-function CDM.dim(var::AbstractCDFVariable, i::Int)
+function CDM.dim(var::CDFVariable, i::Int)
     dname = dimnames(var, i)
     isnothing(dname) && return axes(var.data, i)
     dvar = dataset(var)[dname]
@@ -74,8 +70,20 @@ function CDM.dim(var::AbstractCDFVariable, i::Int)
     end
 end
 
-cdf_type(var::AbstractCDFVariable) = cdf_type(_parent1(var))
-CDF.is_record_varying(var::AbstractCDFVariable) = is_record_varying(_parent1(var))
+const _SubView = Union{SubArray, DiskArrays.SubDiskArray}
+
+function CDM.dim(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
+    parent_var = rebuild(var, parent(var.data))
+    dvar = CDM.dim(parent_var, i)
+    if (dvar isa CDFVariable && is_record_varying(dvar)) || (eltype(dvar) <: AbstractDateTime)
+        indices = parentindices(var.data)[ndims(var)]
+        return selectdim(dvar, ndims(dvar), indices)
+    end
+    return dvar
+end
+
+cdf_type(var::CDFVariable) = cdf_type(_parent1(var))
+CDF.is_record_varying(var::CDFVariable) = is_record_varying(_parent1(var))
 
 # https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
 function depend_time(var; lazy = false)
