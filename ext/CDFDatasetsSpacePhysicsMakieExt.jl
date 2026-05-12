@@ -2,8 +2,8 @@ module CDFDatasetsSpacePhysicsMakieExt
 
 import SpacePhysicsMakie: transform
 using SpacePhysicsMakie: DimArray
-using CDFDatasets: AbstractCDFVariable, SubCDFVariable
+using CDFDatasets: AbstractCDFVariable
 
-transform(var::Union{AbstractCDFVariable, SubCDFVariable}) = transform(DimArray(var))
+transform(var::AbstractCDFVariable) = transform(DimArray(var))
 
 end
