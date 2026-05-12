@@ -12,7 +12,7 @@ function DiskArrays.getindex_disk(var::CDFVariable{T}, interval::Interval) where
     return if T <: AbstractDateTime
         tdim = convert(Vector{T}, var)
         indices = find_indices(tdim, t0, t1)
-        @view tdim[indices]
+        rebuild(var, view(tdim, indices))
     else
         tdim = convert(Vector, dim(var, ndims(var)))
         indices = find_indices(tdim, t0, t1)

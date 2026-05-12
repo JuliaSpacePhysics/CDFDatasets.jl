@@ -1,15 +1,9 @@
-struct CDFDataset{A} <: AbstractCDFDataset
+struct CDFDataset{A, I} <: AbstractCDFDataset
     source::A
-end
-
-struct ConcatCDFDataset{A} <: AbstractCDFDataset
-    sources::A
-end
-
-struct ClippedCDFDataset{D, I} <: AbstractCDFDataset
-    parent::D
     interval::I
 end
+
+CDFDataset(source) = CDFDataset(source, nothing)
 
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 
@@ -43,48 +37,47 @@ end
 Base.parent(ds::CDFDataset) = ds.source
 Base.getindex(ds::AbstractCDFDataset, name::String) = CDM.variable(ds, name)
 
-Base.parent(ds::ClippedCDFDataset) = ds.parent
 Base.view(ds::AbstractCDFDataset, interval::Interval) =
-    ClippedCDFDataset(ds, interval)
+    CDFDataset(ds.source, interval)
 
 # CommonDataModel.jl interface methods
 const SymbolString = Union{String, Symbol}
 
+_is_multi_source(ds::CDFDataset) = ds.source isa AbstractVector
+_parent1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
+_has_interval(ds::CDFDataset) = !isnothing(ds.interval)
+_unclipped(ds::CDFDataset) = CDFDataset(ds.source)
+
 function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
-    data = CDM.variable(ds.source, name)
-    return CDFVariable(data, name, ds, @something metadata CDM.attrib(data))
+    if _has_interval(ds)
+        var = _variable_unclipped(_unclipped(ds), name; metadata)
+        return is_record_varying(var) ? var[ds.interval] : var
+    end
+
+    return _variable_unclipped(ds, name; metadata)
 end
 
-function CDM.variable(ds::ClippedCDFDataset, name::SymbolString)
-    var = CDM.variable(parent(ds), name)
-    return is_record_varying(var) ? var[ds.interval] : var
-end
-
-_parent1(ds::AbstractCDFDataset) = parent(ds)
 CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
 CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
 CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_parent1(ds), name)
 
-CDM.path(ds::AbstractCDFDataset) = CDM.path(parent(ds))
+CDM.path(ds::CDFDataset) = _is_multi_source(ds) ? CDM.path.(parent(ds)) : CDM.path(parent(ds))
 function CDM.name(ds::AbstractCDFDataset)
     return only(get(ds.attrib, "Logical_source", "/"))
 end
 
-function ConcatCDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia)
+function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia)
     backend = Symbol(backend)
     @assert backend in (:julia, :CommonDataFormat)
-    return ConcatCDFDataset(CDF.CDFDataset.(sources))
+    return CDFDataset(CDF.CDFDataset.(sources))
 end
 
-_parent1(ds::ConcatCDFDataset) = ds.sources[1]
-CDM.path(ds::ConcatCDFDataset) = CDM.path.(ds.sources)
-
-function CDM.variable(ds::ConcatCDFDataset, name::SymbolString; metadata = nothing)
+function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing)
     ds1 = _parent1(ds)
     var1 = ds1[name]
     md = @something metadata CDM.attrib(var1)
-    return if is_record_varying(var1)
-        _concat_cdf_variable(map(x -> x[name], ds.sources); metadata = md, parentdataset = ds)
+    return if _is_multi_source(ds) && is_record_varying(var1)
+        _concat_variables(map(source -> source[name], ds.source); name, metadata = md, parentdataset = ds)
     else
         CDFVariable(var1, name, ds, md)
     end

@@ -26,7 +26,7 @@ vds = view(concat_ds, t0 .. t1)
 @info "SubVariable (time-clipped)" @b DimArray($subvar)
 
 @info "from CDFDataset" @b DimArray($concat_ds["V"])
-@info "from ClippedCDFDataset view" @b DimArray($vds["V"])
+@info "from clipped CDFDataset view" @b DimArray($vds["V"])
 @info "from CDFDataset view" @b DimArray($concat_ds["V"][t0 .. t1])
 
 # Array materialization
