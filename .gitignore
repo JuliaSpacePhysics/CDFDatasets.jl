@@ -11,3 +11,5 @@ data/elb_l2_epdef_20210607_v01.cdf
 
 # Downloaded test data
 test/data/
+
+*local*
