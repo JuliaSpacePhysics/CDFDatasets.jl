@@ -1,17 +1,27 @@
-# CDFDatasets
+# CDFDatasets.jl
 
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
 [![version](https://juliahub.com/docs/General/CDFDatasets/stable/version.svg)](https://juliahub.com/ui/Packages/General/CDFDatasets)
 
 [![Build Status](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
 
+A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets compatible with the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface.
 
-CDFDatasets.jl is a julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets compatible with the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface.
 
-**Installation**: at the Julia REPL, run `using Pkg; Pkg.add("CDFDatasets")`
+## Quick Start
 
-**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
+```julia
+using Pkg; Pkg.add("CDFDatasets")
+using CDFDatasets
+
+ds = cdfopen("omni_coho1hr_merged_mag_plasma_20250901_v01.cdf")
+times = ds["Epoch"]
+bx = ds["BR"]
+```
+
+## Features
 
 It provides a high-level interface with features:
 
@@ -21,14 +31,3 @@ It provides a high-level interface with features:
 
 It is recommended to use the native Julia implementation `CommonDataFormat.jl` for reading CDF files. `CDFpp` backend is mainly used for cross-validation, available in the `PyCDFpp` directory.
 
-
-## Quick Example
-
-```julia
-using CDFDatasets
-
-# Open a CDF file
-ds = cdfopen("omni_coho1hr_merged_mag_plasma_20250901_v01.cdf")
-times = ds["Epoch"]
-bx = ds["BR"]
-```
