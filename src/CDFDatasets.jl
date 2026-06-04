@@ -10,7 +10,7 @@ using Dates: unix2datetime, AbstractDateTime
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
-using DiskArrays: getindex_disk, AbstractDiskArray
+using DiskArrays: AbstractDiskArray
 using IntervalSets: endpoints, Interval, (..)
 
 const CDFType = CDF.DataType
