@@ -6,7 +6,7 @@ function find_indices(tdim::Vector, t0, t1)
     end
 end
 
-function DiskArrays.getindex_disk(var::CDFVariable{T}, interval::Interval) where {T}
+function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
     t0, t1 = endpoints(interval)
     # Handle the case where the data itself is the dimension variable
     return if T <: AbstractDateTime
@@ -19,3 +19,5 @@ function DiskArrays.getindex_disk(var::CDFVariable{T}, interval::Interval) where
         selectdim(var, ndims(var), indices)
     end
 end
+
+Base.getindex(var::CDFVariable, interval::Interval) = _getindex_interval(var, interval)
