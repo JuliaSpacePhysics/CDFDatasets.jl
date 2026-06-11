@@ -13,7 +13,7 @@ import DiskArrays
 using DiskArrays: AbstractDiskArray
 using IntervalSets: endpoints, Interval, (..)
 
-const CDFType = CDF.DataType
+const CDFType = CDF.CDFDataType
 
 export CDFDataset, CDFVariable
 export cdfopen

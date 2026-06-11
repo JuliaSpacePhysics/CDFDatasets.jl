@@ -17,7 +17,7 @@ DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
 PyCDFppDiskArraysExt = "DiskArrays"
 
 [compat]
-CommonDataFormat = "0.1.2"
+CommonDataFormat = "0.1.2, 0.2"
 CommonDataModel = "0.4"
 Dates = "1"
 DiskArrays = "0.4"
