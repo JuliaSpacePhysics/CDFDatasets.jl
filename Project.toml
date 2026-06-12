@@ -24,7 +24,7 @@ CDFDatasetsPyCDFppExt = "PyCDFpp"
 CDFDatasetsSpacePhysicsMakieExt = "SpacePhysicsMakie"
 
 [compat]
-CommonDataFormat = "0.1.2"
+CommonDataFormat = "0.2"
 CommonDataModel = "0.4"
 Dates = "1"
 DimensionalData = "0.29, 0.30"

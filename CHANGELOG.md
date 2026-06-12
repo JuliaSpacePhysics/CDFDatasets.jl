@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0]
+
 ### Changed
 
 - **Breaking**: Remove exported `ConcatCDFVariable`; concatenating CDF variables now returns a `CDFVariable` backed by `DiskArrays.ConcatDiskArray`.
@@ -11,5 +13,7 @@
 
 ## [TODO]
 
-- [x] Static analysis test with `JET.jl` 
 - [ ] Full support for `CommonDataModel.jl` interface
+
+[Unreleased]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/tag/v0.2.0
