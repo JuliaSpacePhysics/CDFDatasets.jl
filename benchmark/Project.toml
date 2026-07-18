@@ -4,3 +4,6 @@ CDFDatasets = "075ae62b-f872-4368-b383-31e3aa6c3154"
 CommonDataModel = "1fbeeb36-5f17-413c-809b-666fb144f157"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+
+[compat]
+CommonDataModel = "0.4.4"
