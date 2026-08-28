@@ -22,10 +22,10 @@ If `lazy_load = false`, all variable values are immediately loaded.
 function CDFDataset(file::AbstractString; backend = :julia, kw...)
     backend = Symbol(backend)
     @assert backend in (:julia, :PyCDFpp, :CommonDataFormat)
-    return if backend == :julia || backend == :CommonDataFormat
-        CDFDataset(CDF.CDFDataset(file))
-    elseif backend == :PyCDFpp
+    return if backend == :PyCDFpp
         CDFDataset(PyCDFppDataset(file; lazy_load = false, kw...))
+    else
+        CDFDataset(CDF.CDFDataset(file))
     end
 end
 
