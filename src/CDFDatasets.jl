@@ -11,7 +11,7 @@ import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
 using DiskArrays: AbstractDiskArray
-using IntervalSets: endpoints, Interval, (..)
+using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
 
 const CDFType = CDF.CDFDataType
 
@@ -40,9 +40,9 @@ include("show.jl")
 
 """
     cdfopen(file; kw...) :: CDFDataset
-    cdfopen(files; kw...) :: CDFDataset
+    cdfopen(files, [t0, t1]; kw...) :: CDFDataset
 
-Opens CDF file(s) as a `AbstractCDFDataset`.
+Opens CDF file(s) as a `AbstractCDFDataset`, and restricts record-varying variables to `[t0, t1)` when provided.
 """
 cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
 function cdfopen(files; backend = :julia, kw...)
@@ -50,6 +50,8 @@ function cdfopen(files; backend = :julia, kw...)
     @assert backend in (:julia, :CommonDataFormat)
     return CDFDataset(CDF.CDFDataset.(files))
 end
+
+cdfopen(files, t0, t1; kw...) = view(cdfopen(files; kw...), Interval{:closed,:open}(t0, t1))
 
 CDM.Dimensions(var::AbstractCDFVariable) = ntuple(i -> dim(var, i), ndims(var))
 
