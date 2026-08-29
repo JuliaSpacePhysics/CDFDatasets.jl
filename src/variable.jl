@@ -59,15 +59,18 @@ end
 
 is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 
-function CDM.dim(var::CDFVariable, i::Int)
+# Name of the variable backing dimension `i`, after the DEPEND_TIME swap (see `depend_time`).
+function dimvarname(var::CDFVariable, i::Int)
     dname = dimnames(var, i)
+    isnothing(dname) && return nothing
+    swap = i == ndims(var) && "DEPEND_TIME" in attribnames(var) && is_virtual(dataset(var)[dname])
+    return swap ? attrib(var, "DEPEND_TIME") : dname
+end
+
+function CDM.dim(var::CDFVariable, i::Int)
+    dname = dimvarname(var, i)
     isnothing(dname) && return axes(var.data, i)
-    dvar = dataset(var)[dname]
-    return if i == ndims(var) && is_virtual(dvar) && "DEPEND_TIME" in attribnames(var)
-        depend_time(var)
-    else
-        dvar
-    end
+    return dname == dimnames(var, i) ? dataset(var)[dname] : depend_time(var)
 end
 
 const _SubView = Union{SubArray, DiskArrays.SubDiskArray}

@@ -112,6 +112,15 @@ end
         str = sprint(show, MIME("text/plain"), vds)
         @test occursin("View:", str)
         @test (@b DimArray($vds["V"])).time > 0
+
+        # indices bisected once per epoch, shared by all variables on it
+        @test keys(vds.indices) == Set(["Epoch"])
+        vds["BR"]
+        @test length(vds.indices) == 1
+        # nested views intersect rather than replace
+        nested = view(view(concat_ds, t0 .. DateTime(2020, 06, 01)), DateTime(2020, 04, 01) .. t1)
+        @test nested.interval == t0 .. t1
+        @test Array(nested["V"]) == Array(vds["V"])
     end
 
     # TODO: address memory allocation concerns for view operations
@@ -239,3 +248,10 @@ end
 end
 
 include("test_show.jl")
+
+@testset "find_indices" begin
+    t = DateTime(2020, 1, 1) .+ Hour.(0:9)
+    @test CDFDatasets.find_indices(t, t[2] .. t[4]) == 2:4
+    @test CDFDatasets.find_indices(t, CDFDatasets.Interval{:open, :open}(t[2], t[4])) == 3:3
+    @test_throws ArgumentError CDFDatasets.find_indices(reverse(t), t[2] .. t[4])
+end

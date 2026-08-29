@@ -1,9 +1,19 @@
-struct CDFDataset{A, I} <: AbstractCDFDataset
+struct LockedDict{K, V} <: AbstractDict{K, V}
+    d::Dict{K, V}
+    lock::ReentrantLock
+end
+LockedDict{K, V}() where {K, V} = LockedDict(Dict{K, V}(), ReentrantLock())
+Base.get!(f::Base.Callable, ld::LockedDict, k) = @lock ld.lock get!(f, ld.d, k)
+Base.keys(ld::LockedDict) = @lock ld.lock keys(ld.d)
+Base.length(ld::LockedDict) = @lock ld.lock length(ld.d)
+
+struct CDFDataset{A, I, D} <: AbstractCDFDataset
     source::A
     interval::I
+    indices::D
 end
 
-CDFDataset(source) = CDFDataset(source, nothing)
+CDFDataset(source, interval = nothing) = CDFDataset(source, interval, isnothing(interval) ? nothing : LockedDict{String, UnitRange{Int}}())
 
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 
@@ -38,7 +48,7 @@ Base.parent(ds::CDFDataset) = ds.source
 Base.getindex(ds::AbstractCDFDataset, name::String) = CDM.variable(ds, name)
 
 Base.view(ds::AbstractCDFDataset, interval::Interval) =
-    CDFDataset(ds.source, interval)
+    CDFDataset(ds.source, _has_interval(ds) ? intersect(ds.interval, interval) : interval)
 
 # CommonDataModel.jl interface methods
 const SymbolString = Union{String, Symbol}
@@ -49,12 +59,17 @@ _has_interval(ds::CDFDataset) = !isnothing(ds.interval)
 _unclipped(ds::CDFDataset) = CDFDataset(ds.source)
 
 function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
-    if _has_interval(ds)
-        var = _variable_unclipped(_unclipped(ds), name; metadata)
-        return is_record_varying(var) ? var[ds.interval] : var
+    _has_interval(ds) || return _variable_unclipped(ds, name; metadata)
+    var = _variable_unclipped(_unclipped(ds), name; metadata)
+    is_record_varying(var) || return var
+    N = ndims(var)
+    is_epoch = eltype(var) <: AbstractDateTime
+    key = is_epoch ? String(name) : dimvarname(var, N)
+    indices = get!(ds.indices, key) do
+        tdim = is_epoch ? var : dim(var, N)
+        find_indices(convert(Vector, tdim), ds.interval)
     end
-
-    return _variable_unclipped(ds, name; metadata)
+    return selectdim(var, N, indices)
 end
 
 CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
