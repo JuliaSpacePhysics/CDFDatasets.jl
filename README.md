@@ -2,8 +2,6 @@
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
-
-[![Build Status](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSpacePhysics/CDFDatasets.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
 
 A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets compatible with the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface.
