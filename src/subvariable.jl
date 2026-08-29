@@ -1,25 +1,16 @@
+# Unsorted epochs are rejected otherwise a non-contiguous index vector forces DiskArrays' slowest read path.
 function find_indices(tdim::Vector, interval::Interval)
+    issorted(tdim) || throw(ArgumentError("Interval indexing requires a sorted epoch"))
     t0, t1 = endpoints(interval)
-    return if issorted(tdim)
-        i0 = isleftclosed(interval) ? searchsortedfirst(tdim, t0) : searchsortedlast(tdim, t0) + 1
-        i1 = isrightclosed(interval) ? searchsortedlast(tdim, t1) : searchsortedfirst(tdim, t1) - 1
-        i0:i1
-    else
-        findall(in(interval), tdim)
-    end
+    i0 = isleftclosed(interval) ? searchsortedfirst(tdim, t0) : searchsortedlast(tdim, t0) + 1
+    i1 = isrightclosed(interval) ? searchsortedlast(tdim, t1) : searchsortedfirst(tdim, t1) - 1
+    return i0:i1
 end
 
 function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
-    # Handle the case where the data itself is the dimension variable
-    return if T <: AbstractDateTime
-        tdim = convert(Vector{T}, var)
-        indices = find_indices(tdim, interval)
-        rebuild(var, view(tdim, indices))
-    else
-        tdim = convert(Vector, dim(var, ndims(var)))
-        indices = find_indices(tdim, interval)
-        selectdim(var, ndims(var), indices)
-    end
+    N = ndims(var)
+    tdim = T <: AbstractDateTime ? var : dim(var, N)
+    return selectdim(var, N, find_indices(convert(Vector, tdim), interval))
 end
 
 Base.getindex(var::CDFVariable, interval::Interval) = _getindex_interval(var, interval)
