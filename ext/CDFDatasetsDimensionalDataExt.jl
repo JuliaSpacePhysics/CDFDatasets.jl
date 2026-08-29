@@ -28,7 +28,7 @@ function DimensionalData.dims(v::AbstractCDFVariable)
     end
 end
 
-function DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib, replace_fillval = true, replace_invalid = false)
+function DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib, replace_fillval = true, replace_invalid = true)
     values = sanitize(v; replace_fillval, replace_invalid)
     name = CDM.name(v)
     return DimArray(values, dims(v); name, metadata)

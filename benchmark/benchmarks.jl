@@ -40,6 +40,8 @@ SUITE["variable"]["materialized"]["broadcast"] = @benchmarkable $ELFIN_FLUX_MATE
 SUITE["variable"]["materialize"]["omni-v"] = @benchmarkable materialize($OMNI_V)
 SUITE["variable"]["materialize"]["elfin-flux"] = @benchmarkable materialize($ELFIN_FLUX)
 
+SUITE["sanitize"]["float-3d"] = @benchmarkable sanitize($ELFIN_FLUX)
+SUITE["sanitize"]["omni-v"] = @benchmarkable sanitize($OMNI_V)
 SUITE["concat"]["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
 SUITE["concat"]["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
 SUITE["concat"]["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]
