@@ -24,6 +24,7 @@ const OMNI_V_MATERIALIZED = materialize(OMNI_V)
 const OMNI_MULTI_V = OMNI_MULTI["V"]
 
 const ELFIN_FLUX = ELFIN["elb_pef_hs_Epat_eflux"]
+const ELFIN_SECTNUM = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
 const ELFIN_FLUX_MATERIALIZED = materialize(ELFIN_FLUX)
 
 const CLIP = DateTime(2020, 5, 3) .. DateTime(2020, 5, 4)
@@ -41,7 +42,9 @@ SUITE["variable"]["materialize"]["omni-v"] = @benchmarkable materialize($OMNI_V)
 SUITE["variable"]["materialize"]["elfin-flux"] = @benchmarkable materialize($ELFIN_FLUX)
 
 SUITE["sanitize"]["float-3d"] = @benchmarkable sanitize($ELFIN_FLUX)
+SUITE["sanitize"]["int8"] = @benchmarkable sanitize($ELFIN_SECTNUM)
 SUITE["sanitize"]["omni-v"] = @benchmarkable sanitize($OMNI_V)
+
 SUITE["concat"]["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
 SUITE["concat"]["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
 SUITE["concat"]["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]

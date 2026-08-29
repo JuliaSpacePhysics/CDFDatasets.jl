@@ -1,53 +1,44 @@
-"""Replaces fill values by NaN for `var` with float type elements."""
-function replace_fillval_by_nan!(A, fillval; verbose = false)
-    T = eltype(A)
-    if T <: AbstractFloat
-        nan = T(NaN)
-        replace!(A, fillval => nan)
-    else
-        verbose && @warn "Cannot replace fill values for Array of type $T"
-    end
-    return A
-end
+_bound(::Nothing, _) = nothing
+_bound(x, _) = x
+# ISTP allows one VALIDMIN/VALIDMAX per component along dim 1; shape it to broadcast that way.
+_bound(v::AbstractVector, A) = length(v) == 1 ? only(v) : reshape(v, length(v), ntuple(_ -> 1, ndims(A) - 1)...)
 
-function replace_invalid!(A::AbstractArray{T}, valid_mins, valid_maxs) where {T}
-    isnothing(valid_mins) && return A
-    isnothing(valid_maxs) && return A
-    vmin = only(valid_mins)
-    vmax = only(valid_maxs)
-    return @. A = ifelse((A < vmin) | (A > vmax), T(NaN), A)
-end
+_below(x, lo) = x < lo
+_below(x, ::Nothing) = false
+_above(x, hi) = x > hi
+_above(x, ::Nothing) = false
+# `isequal` so a NaN FILLVAL matches NaN data; `<`/`>` are false for NaN
+isinvalid(x, fillval, lo, hi) = isequal(x, fillval) | _below(x, lo) | _above(x, hi)
 
-function replace_invalid!(A::AbstractMatrix{T}, valid_mins, valid_maxs) where {T}
-    nan = T(NaN)
-    isnothing(valid_mins) && return A
-    isnothing(valid_maxs) && return A
-    for (i, r) in enumerate(eachrow(A))
-        vmin = get(valid_mins, i, valid_mins[1])
-        vmax = get(valid_maxs, i, valid_maxs[1])
-        @. r = ifelse((r < vmin) | (r > vmax), nan, r)
-    end
-    return A
-end
+_attribs(var) = var.attrib
+_attribs(var::CDFVariable) = var.metadata
+
+# Smallest native float that represents T exactly
+_float(::Type{T}) where {T <: Union{Int8, UInt8, Int16, UInt16}} = Float32
+_float(::Type{T}) where {T} = float(T)
 
 """
-    sanitize(var::AbstractCDFVariable; replace_fillval = true, replace_invalid = true)
+    sanitize(var; replace_fillval = true, replace_invalid = true)
 
-Load variable data as an array with fill values and invalid data replaced by `NaN`.
+Load `var` as an `Array` with fill values (`FILLVAL`) and out-of-range values
+(`VALIDMIN`/`VALIDMAX`) replaced by `NaN`.
 
-See also: [`replace_fillval_by_nan!`](@ref)
+Integer variables are promoted to float. Non-`Real` element types (epochs,
+strings) have no `NaN` and are returned unchanged.
 """
 function sanitize(var; replace_fillval = true, replace_invalid = true)
     A = Array(var)
     T = eltype(A)
-    replace_fillval && begin
-        fillval = T(only(@something var.attrib["FILLVAL"] fillvalue(T)))
-        replace_fillval_by_nan!(A, fillval)
-    end
-    replace_invalid && begin
-        vmins = valid_min(var)
-        vmaxs = valid_max(var)
-        replace_invalid!(A, vmins, vmaxs)
-    end
-    return A
+    T <: Real || return A
+    md = _attribs(var)
+    fillval = replace_fillval ? only(@something get(md, "FILLVAL", nothing) fillvalue(T)) : nothing
+    lo = replace_invalid ? _bound(get(md, "VALIDMIN", nothing), A) : nothing
+    hi = replace_invalid ? _bound(get(md, "VALIDMAX", nothing), A) : nothing
+    return _sanitize(_float(T), A, fillval, lo, hi)
+end
+
+# Function barrier: attribute values arrive as `Any`.
+function _sanitize(::Type{F}, A, fillval, lo, hi) where {F}
+    B = eltype(A) === F ? A : Array{F}(undef, size(A))  # `A` is a fresh copy from `Array(var)`
+    return @. B = ifelse(isinvalid(A, fillval, lo, hi), F(NaN), F(A))
 end

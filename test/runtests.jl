@@ -180,10 +180,30 @@ end
         @test size(CDM.dim(subvar, 2)) == (16, 1)
     end
 
-    @testset "replace_invalid" begin
+    @testset "sanitize" begin
+        # FILLVAL is NaN here, so only the VALIDMAX range check can change anything
         var = ds["elb_pef_hs_Epat_eflux"]
-        @test sanitize(var) isa Array
-        @test sanitize(ds["elb_pef_hs_epa_spec"]) isa Matrix
+        A = Array(var)
+        S = sanitize(var)
+        @test S isa Array{Float32, 3}
+        @test all(isnan.(S) .== (isnan.(A) .| (A .> only(var.attrib["VALIDMAX"]))))
+
+        # Int8 with Int16 FILLVAL; no fill values in this file, but sector numbers fall
+        # outside VALIDMIN/VALIDMAX = [0, 32]
+        ivar = ds["elb_pef_sectnum"]
+        I = Array(ivar)
+        bad = (I .< 0) .| (I .> 32)
+        @test any(bad) && !all(bad)
+        F = sanitize(ivar)
+        @test F isa Vector{Float32}
+        @test isnan.(F) == bad
+        @test F[.!bad] == I[.!bad]
+        @test sanitize(ivar; replace_invalid = false) == I
+
+        # per-component VALIDMIN/VALIDMAX broadcast along dim 1
+        A = Float32[1 5 9; 2 6 10; 3 7 11]
+        v = CDF.CDFVariable(A, "v", nothing, Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11]))
+        @test isnan.(sanitize(v)) == Bool[0 1 1; 1 0 1; 1 1 0]
     end
 
 end
