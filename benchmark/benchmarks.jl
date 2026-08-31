@@ -20,7 +20,6 @@ const OMNI_MULTI = cdfopen(OMNI_FILES)
 const ELFIN = cdfopen(ELFIN_FILE)
 
 const OMNI_V = OMNI["V"]
-const OMNI_V_MATERIALIZED = materialize(OMNI_V)
 const OMNI_MULTI_V = OMNI_MULTI["V"]
 
 const ELFIN_FLUX = ELFIN["elb_pef_hs_Epat_eflux"]

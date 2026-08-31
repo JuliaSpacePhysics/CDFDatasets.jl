@@ -139,6 +139,7 @@ end
     ds = cdfopen(elx_file)
     @testset "Basic CDF Reading" begin
         @test CDF.data_version(ds) == 1
+        @test CDM.name(ds) == "elb_l2_epdef"
 
         # Test getting variable names
         @test keys(ds) isa Vector{String}

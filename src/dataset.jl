@@ -28,6 +28,8 @@ available: `:julia` and `:PyCDFpp`. The default is `:julia`.
 
 For `PyCDFpp` backend, we use `lazy_load = true` by default. 
 If `lazy_load = false`, all variable values are immediately loaded.
+
+Global attributes are entry vectors.
 """
 function CDFDataset(file::AbstractString; backend = :julia, kw...)
     backend = Symbol(backend)
@@ -77,9 +79,7 @@ CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
 CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_parent1(ds), name)
 
 CDM.path(ds::CDFDataset) = _is_multi_source(ds) ? CDM.path.(parent(ds)) : CDM.path(parent(ds))
-function CDM.name(ds::AbstractCDFDataset)
-    return only(get(ds.attrib, "Logical_source", "/"))
-end
+CDM.name(ds::AbstractCDFDataset) = join(get(ds.attrib, "Logical_source", '/'), '/')
 
 function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia)
     backend = Symbol(backend)
