@@ -49,13 +49,7 @@ function _dataset_dimname(var::CDFVariable, i::Int)
     return dimnames(source_var, i)
 end
 
-function CDM.dimnames(var::CDFVariable)
-    return if var_type(var) == "data"
-        ntuple(i -> dimnames(var, i), ndims(var))
-    else
-        ()
-    end
-end
+CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
 
 is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 
@@ -67,31 +61,38 @@ function dimvarname(var::CDFVariable, i::Int)
     return swap ? attrib(var, "DEPEND_TIME") : dname
 end
 
-function CDM.dim(var::CDFVariable, i::Int)
+"""
+    depend(var, i) :: Union{CDFVariable, Nothing}
+
+Coordinate variable backing dimension `i` of `var`, or `nothing` when the
+dimension has no DEPEND.
+"""
+function depend(var::CDFVariable, i::Int)
     dname = dimvarname(var, i)
-    isnothing(dname) && return axes(var.data, i)
+    isnothing(dname) && return nothing
     return dname == dimnames(var, i) ? dataset(var)[dname] : depend_time(var)
 end
 
 const _SubView = Union{SubArray, DiskArrays.SubDiskArray}
 
-function CDM.dim(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
-    parent_var = rebuild(var, parent(var.data))
-    dvar = CDM.dim(parent_var, i)
-    if (dvar isa CDFVariable && is_record_varying(dvar)) || (eltype(dvar) <: AbstractDateTime)
+function depend(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
+    dvar = depend(rebuild(var, parent(var.data)), i)
+    isnothing(dvar) && return nothing
+    if eltype(dvar) <: AbstractDateTime || is_record_varying(dvar)
         indices = parentindices(var.data)[ndims(var)]
         return selectdim(dvar, ndims(dvar), indices)
     end
     return dvar
 end
 
+CDM.dim(var::CDFVariable, i::Int) = @something depend(var, i) axes(parent(var), i)
+
 cdf_type(var::CDFVariable) = cdf_type(_parent1(var))
 CDF.is_record_varying(var::CDFVariable) = is_record_varying(_parent1(var))
 
 # https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
-function depend_time(var; lazy = false)
+function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
-    dname = attrib(var, "DEPEND_TIME")
-    dimvar = dataset(var)[dname]
-    return unix2datetime.(lazy ? dimvar : Array(dimvar))
+    dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
+    return rebuild(dimvar, unix2datetime.(Array(dimvar)))
 end
