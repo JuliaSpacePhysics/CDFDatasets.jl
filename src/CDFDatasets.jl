@@ -19,7 +19,7 @@ export CDFDataset, CDFVariable
 export cdfopen
 export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
-export dim
+export dim, depend
 export is_record_varying
 export sanitize, fillvalue, materialize
 export ..

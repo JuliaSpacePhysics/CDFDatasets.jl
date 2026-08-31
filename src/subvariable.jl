@@ -9,7 +9,8 @@ end
 
 function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
     N = ndims(var)
-    tdim = T <: AbstractDateTime ? var : dim(var, N)
+    tdim = T <: AbstractDateTime ? var : depend(var, N)
+    isnothing(tdim) && throw(ArgumentError("Interval indexing requires a time coordinate (DEPEND_0); none found for $(var.name)"))
     return selectdim(var, N, find_indices(convert(Vector, tdim), interval))
 end
 

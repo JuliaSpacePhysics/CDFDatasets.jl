@@ -13,7 +13,7 @@ A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) d
 using Pkg; Pkg.add("CDFDatasets")
 using CDFDatasets
 
-ds = cdfopen("omni_coho1hr_merged_mag_plasma_20250901_v01.cdf")
+ds = cdfopen("data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
 times = ds["Epoch"]
 bx = ds["BR"]
 ```

@@ -24,7 +24,7 @@ function _show_limited(io::IO, var::AbstractCDFVariable)
 
     printstyled(io, indent, CDM.name(var), color = CDM.variable_color[])
     print(io, " (", join(size(var), delim), ")")
-    print(io, " dims=", join(CDM.dimnames(var), delim))
+    print(io, " dims=", join(something.(CDM.dimnames(var), "?"), delim))
     if !isempty(field) || !isempty(units)
         print(io, " [")
         isempty(field) || print(io, field)

@@ -68,7 +68,7 @@ function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
     is_epoch = eltype(var) <: AbstractDateTime
     key = is_epoch ? String(name) : dimvarname(var, N)
     indices = get!(ds.indices, key) do
-        tdim = is_epoch ? var : dim(var, N)
+        tdim = is_epoch ? var : depend(var, N)
         find_indices(convert(Vector, tdim), ds.interval)
     end
     return selectdim(var, N, indices)

@@ -55,7 +55,14 @@ end
 @testset "CDFDataset (Edge cases)" begin
     tha_state_url = "https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/download/v0.1.8/tha_l1_state_20100225_v03.cdf"
     ds = cdfopen(download_test_data(tha_state_url))
-    @test eltype(CDM.dim(ds["tha_pos"], 2)) <: Dates.AbstractDateTime
+    var = ds["tha_pos"]
+    tdim = CDM.dim(var, 2)
+    @test tdim isa CDFVariable
+    @test eltype(tdim) <: Dates.AbstractDateTime
+    # subview keeps the swapped DEPEND_TIME coordinate
+    t = Array(tdim)
+    subvar = var[t[10] .. t[20]]
+    @test Array(CDM.dim(subvar, 2)) == t[10:20]
 end
 
 @testset "Concatenated CDFVariable and DimArray" begin
@@ -157,6 +164,10 @@ end
         @test var_type(var) == "support_data"
         @test length(var.attrib) == length(CDM.attribnames(var))
 
+        @test depend(ds["elb_pef_hs_time"], 1) === nothing
+        @test CDM.dim(ds["elb_pef_hs_time"], 1) == axes(ds["elb_pef_hs_time"], 1)
+        @test CDM.dimnames(ds["elb_pef_hs_time"]) == (nothing,)
+
         @test ndims(ds["elb_pef_hs_epa_spec"]) == 2
         @test CDM.dim(ds["elb_pef_hs_epa_spec"], 2) == ds["elb_pef_hs_time"]
         @test CDM.dim(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_energies_mean"]
@@ -236,6 +247,7 @@ end
     @test sum(var) == sum(data)
     @test maximum(var) == maximum(data)
     @test copy(var) == data
+    @test convert(Vector, var) == data  # copyto! must not bounce between DiskArrays and broadcast
     @test var .* 2 == data .* 2
     @test var .* 2 isa Array
 

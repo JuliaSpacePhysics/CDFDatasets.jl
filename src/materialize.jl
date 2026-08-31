@@ -8,6 +8,9 @@ materialize(var::CDFVariable) = rebuild(var, Array(var.data))
 Base.BroadcastStyle(::Type{<:CDFVariable{T, N, A}}) where {T, N, A<:Array} =
     Base.BroadcastStyle(A)
 
+Base.copyto!(dest::Array, var::CDFVariable{T, N, <:Array}) where {T, N} =
+    copyto!(dest, var.data)
+
 Base.@propagate_inbounds Base.getindex(var::CDFVariable{T, N, A}, I...) where {T, N, A<:Array} =
     getindex(var.data, I...)
 Base.getindex(var::CDFVariable{T, N, A}, name::Union{AbstractString, Symbol}) where {T, N, A<:Array} =
