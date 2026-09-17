@@ -13,7 +13,7 @@ struct CDFDataset{A, I, D} <: AbstractCDFDataset
     indices::D
 end
 
-CDFDataset(source, interval = nothing) = CDFDataset(source, interval, isnothing(interval) ? nothing : LockedDict{String, UnitRange{Int}}())
+CDFDataset(source, interval = nothing) = CDFDataset(source, interval, isnothing(interval) ? nothing : LockedDict{String, Union{UnitRange{Int}, Vector{Int}}}())
 
 # https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
 

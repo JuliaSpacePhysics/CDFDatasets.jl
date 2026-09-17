@@ -1,6 +1,9 @@
-# Unsorted epochs are rejected otherwise a non-contiguous index vector forces DiskArrays' slowest read path.
 function find_indices(tdim::Vector, interval::Interval)
-    issorted(tdim) || throw(ArgumentError("Interval indexing requires a sorted epoch"))
+    if !issorted(tdim)
+        idx = findall(in(interval), tdim)
+        isempty(idx) && return 1:0
+        return length(idx) == last(idx) - first(idx) + 1 ? (first(idx):last(idx)) : idx
+    end
     t0, t1 = endpoints(interval)
     i0 = isleftclosed(interval) ? searchsortedfirst(tdim, t0) : searchsortedlast(tdim, t0) + 1
     i1 = isrightclosed(interval) ? searchsortedlast(tdim, t1) : searchsortedfirst(tdim, t1) - 1
