@@ -286,5 +286,25 @@ include("test_show.jl")
     t = DateTime(2020, 1, 1) .+ Hour.(0:9)
     @test CDFDatasets.find_indices(t, t[2] .. t[4]) == 2:4
     @test CDFDatasets.find_indices(t, CDFDatasets.Interval{:open, :open}(t[2], t[4])) == 3:3
-    @test_throws ArgumentError CDFDatasets.find_indices(reverse(t), t[2] .. t[4])
+    @test CDFDatasets.find_indices(reverse(t), t[2] .. t[4]) == (length(t) - 3):(length(t) - 1)
+    tj = [t[1], t[3], t[2], t[4], t[5]]
+    @test CDFDatasets.find_indices(tj, t[2] .. t[3]) == 2:3
+    @test CDFDatasets.find_indices(tj, t[3] .. t[4]) == [2, 4]
+    @test CDFDatasets.find_indices(tj, t[6] .. t[7]) === 1:0
+    @test CDFDatasets.find_indices(tj, CDFDatasets.Interval{:open, :open}(t[2], t[4])) == 2:2
+end
+
+@testset "Unsorted dataset interval" begin
+    ds = CDFDataset(data_path.([
+        "omni_coho1hr_merged_mag_plasma_20200601_v01.cdf",
+        "omni_coho1hr_merged_mag_plasma_20200501_v01.cdf",
+    ]))
+    interval = DateTime(2020, 5, 31) .. DateTime(2020, 6, 2)
+    epochs = Array(ds["Epoch"])
+    indices = findall(in(interval), epochs)
+    @test length(indices) < last(indices) - first(indices) + 1
+    clipped = view(ds, interval)
+    @test Array(clipped["V"]) == Array(ds["V"])[indices]
+    @test Array(clipped["Epoch"]) == epochs[indices]
+    @test Array(CDFDatasets.depend(clipped["V"], 1)) == epochs[indices]
 end
