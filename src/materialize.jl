@@ -19,7 +19,6 @@ Base.getindex(var::CDFVariable{T, N, <:Array}, name::CDM.CFStdName) where {T, N}
     invoke(getindex, Tuple{Union{AbstractDataset, AbstractVariable}, CDM.CFStdName}, var, name)
 Base.getindex(var::CDFVariable{T, N, <:Array}, interval::Interval) where {T, N} =
     _getindex_interval(var, interval)
-Base.copy(var::CDFVariable{T, N, <:Array}) where {T, N} = copy(var.data)
 
 for fname in (:sum, :prod, :all, :any, :minimum, :maximum)
     @eval begin

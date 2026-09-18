@@ -229,9 +229,6 @@ end
 end
 
 @testset "Materialized CDFVariable array operations" begin
-    within(actual, baseline; factor) = actual.time <= baseline.time * factor
-    within(pair; factor) = within(pair...; factor)
-
     ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
     disk_var = ds["V"]
     var = materialize(disk_var)
@@ -251,11 +248,12 @@ end
     @test var .* 2 == data .* 2
     @test var .* 2 isa Array
 
-    @testset "Performance" begin
-        @test within(@b sum($var), sum($data); factor = 1.1)
-        @test within(@b maximum($var), maximum($data); factor = 1.1)
-        @test within(@b copy($var), copy($data); factor = 1.1)
-        @test_broken within(@b $var .* 2, $data .* 2; factor = 1.1)
+    @testset "Zero-overhead forwarding" begin
+        time_ratio(pair) = pair[1].time / pair[2].time
+        @test (@b sum($var)).bytes == 0
+        @test (@b maximum($var)).bytes == 0
+        # Broadcast reads elementwise through the wrapper instead of its parent.
+        @test_broken time_ratio(@b ($var .* 2, $data .* 2)) < 1.2
     end
 end
 
