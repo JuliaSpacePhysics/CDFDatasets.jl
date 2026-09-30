@@ -15,14 +15,9 @@ include("utils.jl")
     Aqua.test_all(CDFDatasets)
 end
 
-const RUN_JET_TESTS = isempty(VERSION.prerelease)
-
 @testset "JET static analysis" begin
-    if RUN_JET_TESTS
-        using Pkg; Pkg.add("JET"); Pkg.instantiate()
-        using JET
-        JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
-    end
+    using JET
+    JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
 end
 
 
