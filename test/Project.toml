@@ -12,3 +12,10 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 PyCDFpp = {path = "../lib/PyCDFpp.jl"}
+
+[compat]
+Aqua = "0.8"
+Chairmarks = "1"
+DimensionalData = "0.29, 0.30"
+JET = "0.12"
+PyCDFpp = "0.1"
