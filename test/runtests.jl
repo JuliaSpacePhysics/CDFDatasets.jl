@@ -1,3 +1,8 @@
+using Pkg
+# prereleases often have no installable JET.
+const RUN_JET_TESTS = isempty(VERSION.prerelease)
+RUN_JET_TESTS && Pkg.add("JET")
+
 using CDFDatasets
 using CDFDatasets: var_type, cdf_type
 using Test
@@ -15,12 +20,9 @@ include("utils.jl")
     Aqua.test_all(CDFDatasets)
 end
 
-const RUN_JET_TESTS = isempty(VERSION.prerelease)
-
-@testset "JET static analysis" begin
-    if RUN_JET_TESTS
-        using Pkg; Pkg.add("JET"); Pkg.instantiate()
-        using JET
+if RUN_JET_TESTS
+    using JET
+    @testset "JET static analysis" begin
         JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
     end
 end
