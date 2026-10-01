@@ -1,6 +1,6 @@
 name = "CDFDatasets"
 uuid = "075ae62b-f872-4368-b383-31e3aa6c3154"
-version = "0.2.6"
+version = "0.2.7"
 authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 
 [workspace]
@@ -21,7 +21,7 @@ SpacePhysicsMakie = "0c28ffd8-ae30-4a56-b2e4-f8332c621ad2"
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
-CDFDatasetsSpacePhysicsMakieExt = "SpacePhysicsMakie"
+CDFDatasetsSpacePhysicsMakieExt = ["SpacePhysicsMakie", "DimensionalData"]
 
 [compat]
 CommonDataFormat = "0.2"
@@ -31,5 +31,5 @@ DimensionalData = "0.29, 0.30"
 DiskArrays = "0.4"
 IntervalSets = "0.7"
 PyCDFpp = "0.1"
-SpacePhysicsMakie = "0.1, 0.2"
+SpacePhysicsMakie = "0.1, 0.2, 0.3"
 julia = "1.10"
