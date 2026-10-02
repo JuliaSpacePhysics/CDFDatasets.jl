@@ -21,7 +21,7 @@ DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
 
 [sources]
-SpaceDataModel = {path = "../SpaceDataModel.jl"}
+SpaceDataModel = {url = "https://github.com/JuliaSpacePhysics/SpaceDataModel.jl", rev = "sdm-plot-interface"}
 
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
