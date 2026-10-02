@@ -10,6 +10,10 @@
 
 - **Breaking**: `sanitize` is a method of `SpaceDataModel.sanitize` for `AbstractCDFVariable` (other types get its default, which masks by schema metadata), built on `SpaceDataModel.mask_invalid!`.
 
+### Removed
+
+- **Breaking**: the SpacePhysicsMakie extension; SpacePhysicsMakie plots CDF variables through the SpaceDataModel interface instead of converting them to `DimArray`s.
+
 ### Fixed
 
 - `is_record_varying` of a materialized variable.
