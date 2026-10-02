@@ -94,5 +94,10 @@ CDF.is_record_varying(var::CDFVariable) = is_record_varying(_parent1(var))
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
     dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return rebuild(dimvar, unix2datetime.(Array(dimvar)))
+    return rebuild(dimvar, unix2timestamp.(Array(dimvar)))
 end
+
+# Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values
+# that truncation to ns usually puts just below (e.g. .123 s -> .122999808 s).
+unix2timestamp(x::AbstractFloat) = reinterpret(Timestamp{Nanosecond}, 1000 * round(Int64, 1.0e6 * x))
+unix2timestamp(x::Real) = Durations.unix2timestamp(Timestamp{Nanosecond}, x)
