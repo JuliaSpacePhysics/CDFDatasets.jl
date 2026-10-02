@@ -75,6 +75,8 @@ function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
 end
 
 CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
+# CommonDataModel's fallback allocates every variable name.
+Base.haskey(ds::AbstractCDFDataset, name::SymbolString) = haskey(_parent1(ds), String(name))
 CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
 CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_parent1(ds), name)
 
