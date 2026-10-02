@@ -15,6 +15,7 @@ using DiskArrays: AbstractDiskArray
 using PrecompileTools
 using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
 import SpaceDataModel as SDM
+using SpaceDataModel: sanitize
 
 const CDFType = CDF.CDFDataType
 

@@ -6,6 +6,10 @@
 
 - SpaceDataModel time series interface for `CDFVariable` (SpaceDataModel is now a dependency): `tdimnum` from metadata without reading data (`nothing` for non-record-varying variables), `dim` returning in-memory coordinate variables with their attributes (a time-varying `DEPEND_i` is kept whole, sliced like the variable), and `unwrap`.
 
+### Changed
+
+- **Breaking**: `sanitize` is a method of `SpaceDataModel.sanitize` for `AbstractCDFVariable` (other types get its default, which masks by schema metadata), built on `SpaceDataModel.mask_invalid!`.
+
 ### Fixed
 
 - `is_record_varying` of a materialized variable.
