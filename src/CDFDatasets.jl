@@ -14,6 +14,7 @@ import DiskArrays
 using DiskArrays: AbstractDiskArray
 using PrecompileTools
 using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
+import SpaceDataModel as SDM
 
 const CDFType = CDF.CDFDataType
 
@@ -38,6 +39,7 @@ include("CommonDataFormat.jl")
 include("concat.jl")
 include("subvariable.jl")
 include("methods.jl")
+include("timeseries.jl")
 include("show.jl")
 
 """

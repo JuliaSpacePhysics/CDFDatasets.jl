@@ -7,6 +7,7 @@ import CDFDatasets.DiskArrays
 using Dates
 using DimensionalData
 using Chairmarks
+import SpaceDataModel as SDM
 
 include("utils.jl")
 
@@ -59,6 +60,8 @@ end
     t = Array(tdim)
     subvar = var[t[10] .. t[20]]
     @test Array(CDM.dim(subvar, 2)) == t[10:20]
+    @test SDM.tdimnum(var) == 2
+    @test SDM.times(subvar) == t[10:20]
 end
 
 @testset "Concatenated CDFVariable and DimArray" begin
@@ -216,6 +219,34 @@ end
 
 end
 
+
+@testset "SpaceDataModel time series interface" begin
+    ds = cdfopen(data_path("elb_l2_epdef_20210914_v01.cdf"))
+    var = ds["elb_pef_hs_Epat_eflux"]
+    t = SDM.times(var)
+    @test SDM.tdimnum(var) == 3
+    @test t isa Vector{<:Dates.AbstractDateTime}
+    @test t == Array(ds["elb_pef_hs_time"])
+    @test SDM.tdimnum(materialize(var)) == 3
+
+    # time-varying DEPEND_1 kept whole; non-record-varying DEPEND_2 drops its record dimension
+    @test size(SDM.unwrap(SDM.dim(var, 1))) == (10, 44)
+    energies = SDM.dim(var, 2)
+    @test SDM.unwrap(energies) == vec(Array(ds["elb_pef_energies_mean"]))
+    @test SDM.getmeta(energies, "UNITS") == "keV"
+    @test SDM.ISTPSchema()(ds["elb_pef_Et_eflux"])[:depend_1_unit] == "keV"
+    # DEPEND_1 lists 16 energies for 10 pitch-angle bins
+    @test SDM.dim(ds["elb_pef_hs_epa_spec"], 1) == 1:10
+
+    t0, t1 = DateTime("2021-09-14T16:23:44.432"), DateTime("2021-09-14T16:27:35.676")
+    sub = var[t0 .. t1]
+    idx = findall(in(t0 .. t1), t)
+    @test SDM.times(sub) == t[idx]
+    @test SDM.unwrap(SDM.dim(sub, 1)) == SDM.unwrap(SDM.dim(var, 1))[:, idx]
+
+    @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
+    @test !SDM.hastimedim(ds["elb_pef_hs_time"])
+end
 
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")

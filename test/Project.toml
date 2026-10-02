@@ -7,6 +7,7 @@ DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
+SpaceDataModel = "0b37b92c-f0c5-4a52-bd5c-390dec20857c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]

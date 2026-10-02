@@ -39,14 +39,12 @@ _parent1(data::CDFVariable) = _parent1(data.data)
 _parent1(data::DiskArrays.ConcatDiskArray) = _parent1(data.parents[1])
 _parent1(data::Union{SubArray, DiskArrays.SubDiskArray}) = _parent1(parent(data))
 
+# A materialized variable reaches its file variable through the dataset.
+_source_variable(var::CDFVariable) = variable(dataset(var), CDM.name(var))
+
 function CDM.dimnames(var::CDFVariable, i::Int)
     data = _parent1(var)
-    return data isa Array ? _dataset_dimname(var, i) : dimnames(data, i)
-end
-
-function _dataset_dimname(var::CDFVariable, i::Int)
-    source_var = variable(dataset(var), CDM.name(var))
-    return dimnames(source_var, i)
+    return data isa Array ? dimnames(_source_variable(var), i) : dimnames(data, i)
 end
 
 CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
@@ -88,7 +86,10 @@ end
 CDM.dim(var::CDFVariable, i::Int) = @something depend(var, i) axes(parent(var), i)
 
 cdf_type(var::CDFVariable) = cdf_type(_parent1(var))
-CDF.is_record_varying(var::CDFVariable) = is_record_varying(_parent1(var))
+function CDF.is_record_varying(var::CDFVariable)
+    data = _parent1(var)
+    return data isa Array ? is_record_varying(_source_variable(var)) : is_record_varying(data)
+end
 
 # https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
 function depend_time(var)
