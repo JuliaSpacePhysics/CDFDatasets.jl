@@ -54,6 +54,7 @@ end
     tdim = CDM.dim(var, 2)
     @test tdim isa CDFVariable
     @test eltype(tdim) <: Dates.AbstractDateTime
+    @test CDFDatasets.unix2timestamp(1.267056060123e9) == DateTime(2010, 2, 25, 0, 1, 0, 123)
     # subview keeps the swapped DEPEND_TIME coordinate
     t = Array(tdim)
     subvar = var[t[10] .. t[20]]
@@ -178,8 +179,8 @@ end
     end
 
     @testset "SubVariable" begin
-        t0 = DateTime("2021-09-14T16:23:44.432")
-        t1 = DateTime("2021-09-14T16:27:35.676")
+        t0 = DateTime("2021-09-14T16:23:44")
+        t1 = DateTime("2021-09-14T16:27:36")
         var = ds["elb_pef_hs_Epat_eflux"]
         subvar = var[t0 .. t1]
         @test size(subvar) == (10, 16, 22)
