@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- SpaceDataModel time series interface for `CDFVariable` (SpaceDataModel is now a dependency): `tdimnum` from metadata without reading data (`nothing` for non-record-varying variables), `dims` returning in-memory coordinate variables with their attributes (a time-varying `DEPEND_i` is kept whole, sliced like the variable), and `unwrap`.
+
+### Fixed
+
+- `is_record_varying` of a materialized variable.
+
 ## [0.2.0]
 
 ### Changed
