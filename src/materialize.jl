@@ -1,9 +1,9 @@
 """
     materialize(var)::CDFVariable
 
-Load variable data from disk into memory, preserving name, dataset link, and metadata.
+Load variable data from disk into memory, decoded, preserving name, dataset link, and metadata.
 """
-materialize(var::CDFVariable) = rebuild(var, Array(var.data))
+materialize(var::CDFVariable) = rebuild(var, Array(var), nothing)
 
 Base.BroadcastStyle(::Type{<:CDFVariable{T, N, A}}) where {T, N, A<:Array} =
     Base.BroadcastStyle(A)

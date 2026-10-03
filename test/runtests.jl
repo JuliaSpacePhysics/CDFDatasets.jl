@@ -7,6 +7,7 @@ import CDFDatasets.DiskArrays
 using Dates
 using DimensionalData
 using Chairmarks
+import SpaceDataModel as SDM
 
 include("utils.jl")
 
@@ -59,6 +60,8 @@ end
     t = Array(tdim)
     subvar = var[t[10] .. t[20]]
     @test Array(CDM.dim(subvar, 2)) == t[10:20]
+    @test SDM.tdimnum(var) == 2
+    @test SDM.times(subvar) == t[10:20]
 end
 
 @testset "Concatenated CDFVariable and DimArray" begin
@@ -98,7 +101,8 @@ end
         subvar = var[t0 .. t1]
         @test size(subvar) == (25,)
         @test DimArray(subvar).dims[1] ⊆ t0 .. t1
-        @test (@b DimArray(subvar)).time < (@b DimArray(var)).time
+        # reads only the clipped records (timing at this size measures fixed overhead)
+        @test (@b DimArray(subvar)).bytes < (@b DimArray(var)).bytes
     end
 
     @testset "Dataset view (time clip)" begin
@@ -170,7 +174,7 @@ end
 
         @test ndims(ds["elb_pef_hs_Epat_eflux"]) == 3
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1) == ds["elb_pef_hs_epa_spec"]
+        @test isequal(CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1), ds["elb_pef_hs_epa_spec"])
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
         @test is_record_varying(ds["elb_pef_hs_Epat_eflux"]) == true
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
@@ -188,34 +192,68 @@ end
         @test size(CDM.dim(subvar, 2)) == (16, 1)
     end
 
-    @testset "sanitize" begin
+    @testset "decoding on read" begin
         # FILLVAL is NaN here, so only the VALIDMAX range check can change anything
         var = ds["elb_pef_hs_Epat_eflux"]
-        A = Array(var)
-        S = sanitize(var)
+        A = Array(parent(var))
+        S = Array(var)
         @test S isa Array{Float32, 3}
         @test all(isnan.(S) .== (isnan.(A) .| (A .> only(var.attrib["VALIDMAX"]))))
+        @test isequal(var[2:3, :, 5:6], S[2:3, :, 5:6])
+        @test isequal(materialize(var).data, S)
 
         # Int8 with Int16 FILLVAL; no fill values in this file, but sector numbers fall
         # outside VALIDMIN/VALIDMAX = [0, 32]
         ivar = ds["elb_pef_sectnum"]
-        I = Array(ivar)
+        I = Array(parent(ivar))
         bad = (I .< 0) .| (I .> 32)
         @test any(bad) && !all(bad)
-        F = sanitize(ivar)
+        F = Array(ivar)
         @test F isa Vector{Float32}
         @test isnan.(F) == bad
         @test F[.!bad] == I[.!bad]
-        @test sanitize(ivar; replace_invalid = false) == I
+        @test Array(variable(ds, "elb_pef_sectnum"; validmin = nothing, validmax = nothing)) == I
+        @test eltype(variable(ds, "elb_pef_sectnum"; fillval = nothing, validmin = nothing, validmax = nothing)) == Int8
 
-        # per-component VALIDMIN/VALIDMAX broadcast along dim 1
+        # per-component VALIDMIN/VALIDMAX along dim 1, also for a block of components
         A = Float32[1 5 9; 2 6 10; 3 7 11]
-        v = CDF.CDFVariable(A, "v", nothing, Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11]))
-        @test isnan.(sanitize(v)) == Bool[0 1 1; 1 0 1; 1 1 0]
+        md = Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11])
+        expected = Bool[0 1 1; 1 0 1; 1 1 0]
+        @test isnan.(Array(CDF.CDFVariable(A, "v", nothing, md))) == expected
+        lazy = CDF.CDFVariable(view(A, :, :), "v", nothing, md)
+        @test isnan.(lazy[2:3, :]) == expected[2:3, :]
     end
 
 end
 
+
+@testset "SpaceDataModel time series interface" begin
+    ds = cdfopen(data_path("elb_l2_epdef_20210914_v01.cdf"))
+    var = ds["elb_pef_hs_Epat_eflux"]
+    t = SDM.times(var)
+    @test SDM.tdimnum(var) == 3
+    @test t isa Vector{<:Dates.AbstractDateTime}
+    @test t == Array(ds["elb_pef_hs_time"])
+    @test SDM.tdimnum(materialize(var)) == 3
+
+    # time-varying DEPEND_1 kept whole; non-record-varying DEPEND_2 drops its record dimension
+    @test size(SDM.unwrap(SDM.dims(var, 1))) == (10, 44)
+    energies = SDM.dims(var, 2)
+    @test SDM.unwrap(energies) == vec(Array(ds["elb_pef_energies_mean"]))
+    @test SDM.getmeta(energies, "UNITS") == "keV"
+    @test SDM.ISTPSchema()(ds["elb_pef_Et_eflux"])[:depend_1_unit] == "keV"
+    # DEPEND_1 lists 16 energies for 10 pitch-angle bins
+    @test SDM.dims(ds["elb_pef_hs_epa_spec"], 1) == 1:10
+
+    t0, t1 = DateTime("2021-09-14T16:23:44.432"), DateTime("2021-09-14T16:27:35.676")
+    sub = var[t0 .. t1]
+    idx = findall(in(t0 .. t1), t)
+    @test SDM.times(sub) == t[idx]
+    @test SDM.unwrap(SDM.dims(sub, 1)) == SDM.unwrap(SDM.dims(var, 1))[:, idx]
+
+    @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
+    @test !SDM.hastimedim(ds["elb_pef_hs_time"])
+end
 
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")

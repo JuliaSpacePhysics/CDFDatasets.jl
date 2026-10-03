@@ -1,28 +1,89 @@
-struct CDFVariable{T, N, A <: AbstractArray{T, N}, S, P, MD} <: AbstractCDFVariable{T, N}
+# Fill value and valid range replaced by `NaN` on read; see `variable`. Checks are stored as
+# `Vector{F}` (see `SDM._bounds`), so `Mask` and the read kernel do not vary with attribute types.
+# Float variables always have one, a no-op without attributes: one type per float variable shape,
+# so one read path to compile and precompile. `nothing` keeps an integer variable's stored type.
+struct Mask{F}
+    fillval::Vector{F}
+    validmin::Vector{F}
+    validmax::Vector{F}
+end
+
+function Mask(::Type{T}, md; fillval = get(md, "FILLVAL", nothing), validmin = get(md, "VALIDMIN", nothing), validmax = get(md, "VALIDMAX", nothing)) where {T}
+    T <: Real || return nothing
+    T <: AbstractFloat || !all(isnothing, (fillval, validmin, validmax)) || return nothing
+    F = SDM._float(T)
+    return Mask{F}(SDM._bounds(F, fillval, validmin, validmax)...)
+end
+
+"""
+    CDFVariable(data, name, parentdataset, metadata; fillval, validmin, validmax)
+
+Variable whose reads replace fill and out-of-range values by `NaN` (see [`variable`](@ref));
+`parent(var)` is the stored data.
+"""
+struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M <: Union{Nothing, Mask{T}}} <: AbstractCDFVariable{T, N}
     data::A
     name::S
     parentdataset::P
     metadata::MD
+    mask::M
+    function CDFVariable{T}(data::AbstractArray{<:Any, N}, name, parentdataset, metadata, mask) where {T, N}
+        return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata), typeof(mask)}(data, name, parentdataset, metadata, mask)
+    end
 end
+
+# `T` by dispatch, so it is inferred whenever the mask's type is.
+CDFVariable(data::AbstractArray{R}, name, parentdataset, metadata, mask::Nothing) where {R} =
+    CDFVariable{R}(data, name, parentdataset, metadata, mask)
+CDFVariable(data, name, parentdataset, metadata, mask::Mask{F}) where {F} =
+    CDFVariable{F}(data, name, parentdataset, metadata, mask)
+
+# The source variable's type is usually not inferred (`ds[name]`); `@nospecializeinfer` keeps that
+# from compiling the mask and everything downstream for abstract types. In-memory data is stored
+# decoded, so `Array`-backed variables read `data` directly.
+Base.@nospecializeinfer function CDFVariable(@nospecialize(data), name, parentdataset, metadata; kw...)
+    mask = Mask(eltype(data), metadata; kw...)
+    data isa Array && !isnothing(mask) && return CDFVariable(_decode(data, mask), name, parentdataset, metadata, nothing)
+    return CDFVariable(data, name, parentdataset, metadata, mask)
+end
+
+# ISTP gives one VALIDMIN/VALIDMAX per component along dimension 1.
+_decode(A, m::Mask) = SDM.mask_invalid(A; m.fillval, m.validmin, m.validmax, dims = 1)
 
 Base.parent(var::CDFVariable) = var.data
 Base.size(var::CDFVariable) = size(var.data)
 
 
-rebuild(var, data) = CDFVariable(data, var.name, var.parentdataset, var.metadata)
+# Same element type as `var`: `mask` is `var`'s or, for decoded `data`, `nothing`.
+rebuild(var::CDFVariable{T}, data, mask = var.mask) where {T} = CDFVariable{T}(data, var.name, var.parentdataset, var.metadata, mask)
 
 Base.view(var::CDFVariable, I...) = rebuild(var, view(var.data, I...))
 Base.reshape(var::CDFVariable, dims::Dims) = rebuild(var, reshape(var.data, dims))
 
 function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
-    d = a.data
-    if d isa AbstractDiskArray
-        DiskArrays.readblock!(d, aout, inds...)
-    else
-        copyto!(aout, view(d, inds...))
-    end
+    m = a.mask
+    isnothing(m) ? _readraw!(a.data, aout, inds...) : _readmasked!(a.data, aout, m, inds)
     return aout
 end
+
+# Function barrier: DiskArrays may infer `aout` abstractly (e.g. `Array{Float32}`), which would
+# compile this path generically for every variable type.
+function _readmasked!(data, aout, m::Mask, inds)
+    # The kernel runs on `Array`s only: on a view it would compile generic reshaped-view indexing.
+    # Float data is read straight into `aout` and masked in place.
+    inplace = aout isa Array && eltype(aout) === eltype(data)
+    raw = _readraw!(data, inplace ? aout : Array{eltype(data)}(undef, size(aout)), inds...)
+    out = aout isa Array ? aout : similar(raw, eltype(aout))
+    SDM._mask_invalid!(out, raw, _block(m.fillval, inds), _block(m.validmin, inds), _block(m.validmax, inds), 1)
+    out === aout || copyto!(aout, out)
+    return aout
+end
+
+_readraw!(d::AbstractDiskArray, aout, inds...) = (DiskArrays.readblock!(d, aout, inds...); aout)
+_readraw!(d, aout, inds...) = copyto!(aout, view(d, inds...))
+
+# Per-component checks restricted to the block's components
+_block(v, inds) = length(v) == 1 ? v : v[inds[1]]
 
 DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
     DiskArrays.eachchunk(var.data)
@@ -39,14 +100,12 @@ _parent1(data::CDFVariable) = _parent1(data.data)
 _parent1(data::DiskArrays.ConcatDiskArray) = _parent1(data.parents[1])
 _parent1(data::Union{SubArray, DiskArrays.SubDiskArray}) = _parent1(parent(data))
 
+# A materialized variable reaches its file variable through the dataset.
+_source_variable(var::CDFVariable) = variable(dataset(var), CDM.name(var))
+
 function CDM.dimnames(var::CDFVariable, i::Int)
     data = _parent1(var)
-    return data isa Array ? _dataset_dimname(var, i) : dimnames(data, i)
-end
-
-function _dataset_dimname(var::CDFVariable, i::Int)
-    source_var = variable(dataset(var), CDM.name(var))
-    return dimnames(source_var, i)
+    return data isa Array ? dimnames(_source_variable(var), i) : dimnames(data, i)
 end
 
 CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
@@ -88,13 +147,16 @@ end
 CDM.dim(var::CDFVariable, i::Int) = @something depend(var, i) axes(parent(var), i)
 
 cdf_type(var::CDFVariable) = cdf_type(_parent1(var))
-CDF.is_record_varying(var::CDFVariable) = is_record_varying(_parent1(var))
+function CDF.is_record_varying(var::CDFVariable)
+    data = _parent1(var)
+    return data isa Array ? is_record_varying(_source_variable(var)) : is_record_varying(data)
+end
 
 # https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
     dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return rebuild(dimvar, unix2timestamp.(Array(dimvar)))
+    return CDFVariable(unix2timestamp.(Array(parent(dimvar))), dimvar.name, dimvar.parentdataset, dimvar.metadata, nothing)
 end
 
 # Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values

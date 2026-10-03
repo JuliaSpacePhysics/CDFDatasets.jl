@@ -14,16 +14,18 @@ DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
 Durations = "41ac09f5-0a95-4810-aa18-c88bf48ee130"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+SpaceDataModel = "0b37b92c-f0c5-4a52-bd5c-390dec20857c"
 
 [weakdeps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
-SpacePhysicsMakie = "0c28ffd8-ae30-4a56-b2e4-f8332c621ad2"
+
+[sources]
+SpaceDataModel = {url = "https://github.com/JuliaSpacePhysics/SpaceDataModel.jl", rev = "sdm-plot-interface"}
 
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
-CDFDatasetsSpacePhysicsMakieExt = ["SpacePhysicsMakie", "DimensionalData"]
 
 [compat]
 CommonDataFormat = "0.2, 0.3"
@@ -35,5 +37,5 @@ Durations = "1.4"
 IntervalSets = "0.7"
 PrecompileTools = "1"
 PyCDFpp = "0.1"
-SpacePhysicsMakie = "0.1, 0.2, 0.3"
+SpaceDataModel = "0.3.3, 0.4"
 julia = "1.10"
