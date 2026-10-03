@@ -4,9 +4,20 @@ function _concat_variables(arrays; name = CDM.name(first(arrays)), metadata = CD
         i == d ? length(arrays) : 1
     end
     cdas = reshape(_as_array(arrays), sz)
-    data = DiskArrays.ConcatDiskArray(_storage_parent.(cdas))
+    data = _irregular_chunks(DiskArrays.ConcatDiskArray(_storage_parent.(cdas)))
     return CDFVariable(data, name, parentdataset, metadata)
 end
+
+# ConcatDiskArray picks RegularChunks or IrregularChunks depending on whether the parts have
+# equal lengths, so the same variable would get a different type (and separately compiled and
+# precompiled code) per file set. Always using IrregularChunks keeps one type.
+function _irregular_chunks(a::DiskArrays.ConcatDiskArray{T, N, P, C, HC, ID}) where {T, N, P, C, HC, ID}
+    chunks = DiskArrays.GridChunks(map(_as_irregular, a.chunks.chunks))
+    return DiskArrays.ConcatDiskArray{T, N, P, typeof(chunks), HC, ID}(a.parents, a.startinds, a.size, chunks, a.haschunks, a.innerdims)
+end
+
+_as_irregular(c::DiskArrays.IrregularChunks) = c
+_as_irregular(c) = DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, length.(c)))
 
 _as_array(arrays::AbstractArray) = arrays
 _as_array(arrays) = collect(arrays)
