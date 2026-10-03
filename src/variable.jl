@@ -1,5 +1,7 @@
 # Fill value and valid range replaced by `NaN` on read; see `variable`. Checks are stored as
 # `Vector{F}` (see `SDM._bounds`), so `Mask` and the read kernel do not vary with attribute types.
+# Float variables always have one, a no-op without attributes: one type per float variable shape,
+# so one read path to compile and precompile. `nothing` keeps an integer variable's stored type.
 struct Mask{F}
     fillval::Vector{F}
     validmin::Vector{F}
@@ -8,7 +10,7 @@ end
 
 function Mask(::Type{T}, md; fillval = get(md, "FILLVAL", nothing), validmin = get(md, "VALIDMIN", nothing), validmax = get(md, "VALIDMAX", nothing)) where {T}
     T <: Real || return nothing
-    all(isnothing, (fillval, validmin, validmax)) && return nothing
+    T <: AbstractFloat || !all(isnothing, (fillval, validmin, validmax)) || return nothing
     F = SDM._float(T)
     return Mask{F}(SDM._bounds(F, fillval, validmin, validmax)...)
 end
@@ -19,18 +21,16 @@ end
 Variable whose reads replace fill and out-of-range values by `NaN` (see [`variable`](@ref));
 `parent(var)` is the stored data.
 """
-struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD} <: AbstractCDFVariable{T, N}
+struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M <: Union{Nothing, Mask{T}}} <: AbstractCDFVariable{T, N}
     data::A
     name::S
     parentdataset::P
     metadata::MD
-    # Not a type parameter: float variables with and without a mask share one type (and its
-    # precompiled code); integers differ anyway, as masking changes their element type.
-    mask::Union{Nothing, Mask{T}}
+    mask::M
     # In-memory data is stored decoded, so `Array`-backed variables read `data` directly.
     function CDFVariable{T}(data::AbstractArray{<:Any, N}, name, parentdataset, metadata, mask) where {T, N}
         data isa Array && !isnothing(mask) && return CDFVariable{T}(_decode(data, mask), name, parentdataset, metadata, nothing)
-        return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata)}(data, name, parentdataset, metadata, mask)
+        return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata), typeof(mask)}(data, name, parentdataset, metadata, mask)
     end
 end
 
@@ -65,8 +65,10 @@ end
 # Function barrier: DiskArrays may infer `aout` abstractly (e.g. `Array{Float32}`), which would
 # compile this path generically for every variable type.
 function _readmasked!(data, aout, m::Mask, inds)
-    raw = _readraw!(data, Array{eltype(data)}(undef, size(aout)), inds...)
     # The kernel runs on `Array`s only: on a view it would compile generic reshaped-view indexing.
+    # Float data is read straight into `aout` and masked in place.
+    inplace = aout isa Array && eltype(aout) === eltype(data)
+    raw = _readraw!(data, inplace ? aout : Array{eltype(data)}(undef, size(aout)), inds...)
     out = aout isa Array ? aout : similar(raw, eltype(aout))
     SDM._mask_invalid!(out, raw, _block(m.fillval, inds), _block(m.validmin, inds), _block(m.validmax, inds), 1)
     out === aout || copyto!(aout, out)
