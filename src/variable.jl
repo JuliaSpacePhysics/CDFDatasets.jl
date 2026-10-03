@@ -27,9 +27,7 @@ struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M <: Union{Noth
     parentdataset::P
     metadata::MD
     mask::M
-    # In-memory data is stored decoded, so `Array`-backed variables read `data` directly.
     function CDFVariable{T}(data::AbstractArray{<:Any, N}, name, parentdataset, metadata, mask) where {T, N}
-        data isa Array && !isnothing(mask) && return CDFVariable{T}(_decode(data, mask), name, parentdataset, metadata, nothing)
         return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata), typeof(mask)}(data, name, parentdataset, metadata, mask)
     end
 end
@@ -40,8 +38,14 @@ CDFVariable(data::AbstractArray{R}, name, parentdataset, metadata, mask::Nothing
 CDFVariable(data, name, parentdataset, metadata, mask::Mask{F}) where {F} =
     CDFVariable{F}(data, name, parentdataset, metadata, mask)
 
-CDFVariable(data, name, parentdataset, metadata; kw...) =
-    CDFVariable(data, name, parentdataset, metadata, Mask(eltype(data), metadata; kw...))
+# The source variable's type is usually not inferred (`ds[name]`); `@nospecializeinfer` keeps that
+# from compiling the mask and everything downstream for abstract types. In-memory data is stored
+# decoded, so `Array`-backed variables read `data` directly.
+Base.@nospecializeinfer function CDFVariable(@nospecialize(data), name, parentdataset, metadata; kw...)
+    mask = Mask(eltype(data), metadata; kw...)
+    data isa Array && !isnothing(mask) && return CDFVariable(_decode(data, mask), name, parentdataset, metadata, nothing)
+    return CDFVariable(data, name, parentdataset, metadata, mask)
+end
 
 # ISTP gives one VALIDMIN/VALIDMAX per component along dimension 1.
 _decode(A, m::Mask) = SDM.mask_invalid(A; m.fillval, m.validmin, m.validmax, dims = 1)
