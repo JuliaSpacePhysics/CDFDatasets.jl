@@ -1,28 +1,67 @@
-struct CDFVariable{T, N, A <: AbstractArray{T, N}, S, P, MD} <: AbstractCDFVariable{T, N}
+# Fill value and valid range replaced by `NaN` on read; see `variable`.
+struct Mask{F, L, H}
+    fillval::F
+    validmin::L
+    validmax::H
+end
+
+function Mask(::Type{T}, md; fillval = get(md, "FILLVAL", nothing), validmin = get(md, "VALIDMIN", nothing), validmax = get(md, "VALIDMAX", nothing)) where {T}
+    T <: Real || return nothing
+    all(isnothing, (fillval, validmin, validmax)) && return nothing
+    return Mask(fillval, validmin, validmax)
+end
+
+"""
+    CDFVariable(data, name, parentdataset, metadata; fillval, validmin, validmax)
+
+Variable whose reads replace fill and out-of-range values by `NaN` (see [`variable`](@ref));
+`parent(var)` is the stored data.
+"""
+struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M} <: AbstractCDFVariable{T, N}
     data::A
     name::S
     parentdataset::P
     metadata::MD
+    mask::M
+    # In-memory data is stored decoded, so `Array`-backed variables read `data` directly.
+    function CDFVariable(data::AbstractArray{R, N}, name, parentdataset, metadata, mask) where {R, N}
+        data isa Array && !isnothing(mask) && return CDFVariable(_decode(data, mask), name, parentdataset, metadata, nothing)
+        T = _eltype(R, mask)
+        return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata), typeof(mask)}(data, name, parentdataset, metadata, mask)
+    end
 end
+
+CDFVariable(data, name, parentdataset, metadata; kw...) =
+    CDFVariable(data, name, parentdataset, metadata, Mask(eltype(data), metadata; kw...))
+
+_eltype(::Type{R}, ::Nothing) where {R} = R
+_eltype(::Type{R}, ::Mask) where {R} = SDM._float(R)
+
+# ISTP gives one VALIDMIN/VALIDMAX per component along dimension 1.
+_decode(A, m::Mask) = SDM.mask_invalid(A; m.fillval, m.validmin, m.validmax, dims = 1)
 
 Base.parent(var::CDFVariable) = var.data
 Base.size(var::CDFVariable) = size(var.data)
 
 
-rebuild(var, data) = CDFVariable(data, var.name, var.parentdataset, var.metadata)
+rebuild(var, data, mask = var.mask) = CDFVariable(data, var.name, var.parentdataset, var.metadata, mask)
 
 Base.view(var::CDFVariable, I...) = rebuild(var, view(var.data, I...))
 Base.reshape(var::CDFVariable, dims::Dims) = rebuild(var, reshape(var.data, dims))
 
 function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
-    d = a.data
-    if d isa AbstractDiskArray
-        DiskArrays.readblock!(d, aout, inds...)
-    else
-        copyto!(aout, view(d, inds...))
-    end
-    return aout
+    m = a.mask
+    isnothing(m) && return _readraw!(a.data, aout, inds...)
+    raw = _readraw!(a.data, similar(aout, eltype(a.data)), inds...)
+    return SDM.mask_invalid!(aout, raw; m.fillval, validmin = _block(m.validmin, inds), validmax = _block(m.validmax, inds), dims = 1)
 end
+
+_readraw!(d::AbstractDiskArray, aout, inds...) = (DiskArrays.readblock!(d, aout, inds...); aout)
+_readraw!(d, aout, inds...) = copyto!(aout, view(d, inds...))
+
+# Per-component bounds restricted to the block's components
+_block(v::AbstractVector, inds) = length(v) == 1 ? v : v[inds[1]]
+_block(x, _) = x
 
 DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
     DiskArrays.eachchunk(var.data)
@@ -95,7 +134,7 @@ end
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
     dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return rebuild(dimvar, unix2timestamp.(Array(dimvar)))
+    return rebuild(dimvar, unix2timestamp.(Array(parent(dimvar))), nothing)
 end
 
 # Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values

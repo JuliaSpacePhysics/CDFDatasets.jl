@@ -23,10 +23,7 @@ end
 
 DimensionalData.dims(v::AbstractCDFVariable) = ntuple(i -> format_dim(v, i), ndims(v))
 
-function DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib, replace_fillval = true, replace_invalid = true)
-    values = sanitize(v; replace_fillval, replace_invalid)
-    name = CDM.name(v)
-    return DimArray(values, dims(v); name, metadata)
-end
+DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib) =
+    DimArray(Array(v), dims(v); name = CDM.name(v), metadata)
 
 end

@@ -101,7 +101,8 @@ end
         subvar = var[t0 .. t1]
         @test size(subvar) == (25,)
         @test DimArray(subvar).dims[1] ⊆ t0 .. t1
-        @test (@b DimArray(subvar)).time < (@b DimArray(var)).time
+        # reads only the clipped records (timing at this size measures fixed overhead)
+        @test (@b DimArray(subvar)).bytes < (@b DimArray(var)).bytes
     end
 
     @testset "Dataset view (time clip)" begin
@@ -173,7 +174,7 @@ end
 
         @test ndims(ds["elb_pef_hs_Epat_eflux"]) == 3
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1) == ds["elb_pef_hs_epa_spec"]
+        @test isequal(CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1), ds["elb_pef_hs_epa_spec"])
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
         @test is_record_varying(ds["elb_pef_hs_Epat_eflux"]) == true
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
@@ -191,30 +192,36 @@ end
         @test size(CDM.dim(subvar, 2)) == (16, 1)
     end
 
-    @testset "sanitize" begin
+    @testset "decoding on read" begin
         # FILLVAL is NaN here, so only the VALIDMAX range check can change anything
         var = ds["elb_pef_hs_Epat_eflux"]
-        A = Array(var)
-        S = sanitize(var)
+        A = Array(parent(var))
+        S = Array(var)
         @test S isa Array{Float32, 3}
         @test all(isnan.(S) .== (isnan.(A) .| (A .> only(var.attrib["VALIDMAX"]))))
+        @test isequal(var[2:3, :, 5:6], S[2:3, :, 5:6])
+        @test isequal(materialize(var).data, S)
 
         # Int8 with Int16 FILLVAL; no fill values in this file, but sector numbers fall
         # outside VALIDMIN/VALIDMAX = [0, 32]
         ivar = ds["elb_pef_sectnum"]
-        I = Array(ivar)
+        I = Array(parent(ivar))
         bad = (I .< 0) .| (I .> 32)
         @test any(bad) && !all(bad)
-        F = sanitize(ivar)
+        F = Array(ivar)
         @test F isa Vector{Float32}
         @test isnan.(F) == bad
         @test F[.!bad] == I[.!bad]
-        @test sanitize(ivar; replace_invalid = false) == I
+        @test Array(variable(ds, "elb_pef_sectnum"; validmin = nothing, validmax = nothing)) == I
+        @test eltype(variable(ds, "elb_pef_sectnum"; fillval = nothing, validmin = nothing, validmax = nothing)) == Int8
 
-        # per-component VALIDMIN/VALIDMAX broadcast along dim 1
+        # per-component VALIDMIN/VALIDMAX along dim 1, also for a block of components
         A = Float32[1 5 9; 2 6 10; 3 7 11]
-        v = CDF.CDFVariable(A, "v", nothing, Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11]))
-        @test isnan.(sanitize(v)) == Bool[0 1 1; 1 0 1; 1 1 0]
+        md = Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11])
+        expected = Bool[0 1 1; 1 0 1; 1 1 0]
+        @test isnan.(Array(CDF.CDFVariable(A, "v", nothing, md))) == expected
+        lazy = CDF.CDFVariable(view(A, :, :), "v", nothing, md)
+        @test isnan.(lazy[2:3, :]) == expected[2:3, :]
     end
 
 end

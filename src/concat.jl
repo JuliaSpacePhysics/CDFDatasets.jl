@@ -1,11 +1,11 @@
-function _concat_variables(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
+function _concat_variables(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing, kw...)
     d = @something dim ndims(first(arrays))
     sz = map(ntuple(identity, d)) do i
         i == d ? length(arrays) : 1
     end
     cdas = reshape(_as_array(arrays), sz)
     data = _irregular_chunks(DiskArrays.ConcatDiskArray(_storage_parent.(cdas)))
-    return CDFVariable(data, name, parentdataset, metadata)
+    return CDFVariable(data, name, parentdataset, metadata; kw...)
 end
 
 # ConcatDiskArray picks RegularChunks or IrregularChunks depending on whether the parts have
@@ -48,8 +48,7 @@ _storage_parent(data) = data
     return
 end
 
-function DiskArrays.readblock!(a::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}, aout, inds::AbstractUnitRange...) where {T, N}
-    data = a.data
+function _readraw!(data::DiskArrays.ConcatDiskArray, aout, inds...)
     fast_concat_diskarray_block_io(data, inds...) do outer_range, array_range, I
         aout[outer_range...] = data.parents[I][array_range...]
     end
@@ -63,10 +62,12 @@ function Base.Array(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where 
     vars = var.data.parents
     d = ndims(var)
     f = d == 1 ? vcat : (d == 2 ? hcat : _cat)
-    return reduce(f, Array.(vars))
+    A = reduce(f, Array.(vars))
+    return isnothing(var.mask) ? A : _decode(A, var.mask)
 end
 
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
+    # Decoding is idempotent, so in-memory (decoded) parts take the metadata mask too.
     return _concat_variables((A1, As...); dim = dims)
 end
 

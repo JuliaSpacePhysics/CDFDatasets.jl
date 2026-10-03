@@ -15,7 +15,6 @@ using DiskArrays: AbstractDiskArray
 using PrecompileTools
 using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
 import SpaceDataModel as SDM
-using SpaceDataModel: sanitize
 
 const CDFType = CDF.CDFDataType
 
@@ -25,7 +24,7 @@ export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export dim, depend
 export is_record_varying
-export sanitize, fillvalue, materialize
+export fillvalue, materialize
 export ..
 export variable
 
@@ -39,7 +38,6 @@ include("istp.jl")
 include("CommonDataFormat.jl")
 include("concat.jl")
 include("subvariable.jl")
-include("methods.jl")
 include("timeseries.jl")
 include("show.jl")
 

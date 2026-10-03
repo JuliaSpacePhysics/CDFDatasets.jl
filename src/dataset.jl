@@ -60,9 +60,17 @@ _parent1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
 _has_interval(ds::CDFDataset) = !isnothing(ds.interval)
 _unclipped(ds::CDFDataset) = CDFDataset(ds.source)
 
-function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
-    _has_interval(ds) || return _variable_unclipped(ds, name; metadata)
-    var = _variable_unclipped(_unclipped(ds), name; metadata)
+"""
+    variable(ds, name; metadata, fillval, validmin, validmax) :: CDFVariable
+
+Variable `name` of `ds`, also `ds[name]`. Reads replace values equal to `fillval` or outside
+`[validmin, validmax]` by `NaN`; these default to the `FILLVAL`, `VALIDMIN` and `VALIDMAX`
+attributes, and `nothing` disables a check. Masked integer variables read as the smallest float type
+that represents them exactly; `parent(var)` is the stored data.
+"""
+function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
+    _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)
+    var = _variable_unclipped(_unclipped(ds), name; metadata, kw...)
     is_record_varying(var) || return var
     N = ndims(var)
     is_epoch = eltype(var) <: AbstractDateTime
@@ -87,13 +95,13 @@ function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia)
     return CDFDataset(CDF.CDFDataset.(sources))
 end
 
-function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing)
+function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     ds1 = _parent1(ds)
     var1 = ds1[name]
     md = @something metadata CDM.attrib(var1)
     return if _is_multi_source(ds) && is_record_varying(var1)
-        _concat_variables(map(source -> source[name], ds.source); name, metadata = md, parentdataset = ds)
+        _concat_variables(map(source -> source[name], ds.source); name, metadata = md, parentdataset = ds, kw...)
     else
-        CDFVariable(var1, name, ds, md)
+        CDFVariable(var1, name, ds, md; kw...)
     end
 end

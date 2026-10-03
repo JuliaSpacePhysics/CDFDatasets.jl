@@ -40,9 +40,10 @@ SUITE["variable"]["materialized"]["broadcast"] = @benchmarkable $ELFIN_FLUX_MATE
 SUITE["variable"]["materialize"]["omni-v"] = @benchmarkable materialize($OMNI_V)
 SUITE["variable"]["materialize"]["elfin-flux"] = @benchmarkable materialize($ELFIN_FLUX)
 
-SUITE["sanitize"]["float-3d"] = @benchmarkable sanitize($ELFIN_FLUX)
-SUITE["sanitize"]["int8"] = @benchmarkable sanitize($ELFIN_SECTNUM)
-SUITE["sanitize"]["omni-v"] = @benchmarkable sanitize($OMNI_V)
+SUITE["decode"]["float-3d"] = @benchmarkable Array($ELFIN_FLUX)
+SUITE["decode"]["float-3d-raw"] = @benchmarkable Array(parent($ELFIN_FLUX))
+SUITE["decode"]["int8"] = @benchmarkable Array($ELFIN_SECTNUM)
+SUITE["decode"]["omni-v"] = @benchmarkable Array($OMNI_V)
 
 SUITE["concat"]["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
 SUITE["concat"]["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
