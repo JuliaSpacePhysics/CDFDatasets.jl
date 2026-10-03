@@ -1,5 +1,5 @@
 # Multi-file opens mirror CDAWeb's `cdfopen(::Vector{String})` + interval view path;
-# the ELFIN file adds TT2000-indexed 2-D variables.
+# the ELFIN file adds TT2000-indexed 2-D variables, single- and multi-file.
 PrecompileTools.@setup_workload begin
     data = joinpath(@__DIR__, "..", "data")
     omni = [joinpath(data, "omni_coho1hr_merged_mag_plasma_2020$(m)01_v01.cdf") for m in ("05", "06")]
@@ -14,10 +14,9 @@ PrecompileTools.@setup_workload begin
         end
         view(ds, DateTime(2020, 5, 2) .. DateTime(2020, 6, 3))["BR"][:]
 
-        ds = cdfopen(elb)
-        var = ds["elb_pef_Et_nflux"]
-        var[:, :]
-        depend(var, 2)[:]
-        view(ds, DateTime(2021, 9, 14) .. DateTime(2021, 9, 15))["elb_pef_Et_nflux"][:, :]
+        for ds in (cdfopen(elb), cdfopen([elb, elb]))
+            ds["elb_pef_Et_nflux"][:, :]
+            view(ds, DateTime(2021, 9, 14) .. DateTime(2021, 9, 15))["elb_pef_Et_nflux"][:, :]
+        end
     end
 end
