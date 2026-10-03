@@ -6,12 +6,13 @@ import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, 
 import CommonDataModel as CDM
 using CommonDataFormat
 using CommonDataFormat: TT2000, Epoch, Epoch16, fillvalue
-using Dates: AbstractDateTime, Nanosecond
+using Dates: AbstractDateTime, DateTime, Nanosecond
 using Durations: Durations, Timestamp
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
 import DiskArrays
 using DiskArrays: AbstractDiskArray
+using PrecompileTools
 using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
 
 const CDFType = CDF.CDFDataType
@@ -55,5 +56,7 @@ end
 cdfopen(files, t0, t1; kw...) = view(cdfopen(files; kw...), Interval{:closed,:open}(t0, t1))
 
 CDM.Dimensions(var::AbstractCDFVariable) = ntuple(i -> dim(var, i), ndims(var))
+
+include("precompile.jl")
 
 end
