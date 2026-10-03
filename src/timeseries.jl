@@ -7,13 +7,13 @@ function SDM.tdimnum(var::CDFVariable)
 end
 
 """
-    SpaceDataModel.dim(var::CDFVariable, i)
+    SpaceDataModel.dims(var::CDFVariable, i)
 
 In-memory coordinate variable of dimension `i` (its `DEPEND`), or `axes(var, i)` when there is
 none or its shape does not fit. A non-record-varying coordinate loses its length-1 record dimension;
 a record-varying one keeps its records, sliced like `var`.
 """
-function SDM.dim(var::CDFVariable, i::Integer)
+function SDM.dims(var::CDFVariable, i::Integer)
     dv = depend(var, i)
     isnothing(dv) && return axes(var, i)
     c = _inmemory(dv)

@@ -230,19 +230,19 @@ end
     @test SDM.tdimnum(materialize(var)) == 3
 
     # time-varying DEPEND_1 kept whole; non-record-varying DEPEND_2 drops its record dimension
-    @test size(SDM.unwrap(SDM.dim(var, 1))) == (10, 44)
-    energies = SDM.dim(var, 2)
+    @test size(SDM.unwrap(SDM.dims(var, 1))) == (10, 44)
+    energies = SDM.dims(var, 2)
     @test SDM.unwrap(energies) == vec(Array(ds["elb_pef_energies_mean"]))
     @test SDM.getmeta(energies, "UNITS") == "keV"
     @test SDM.ISTPSchema()(ds["elb_pef_Et_eflux"])[:depend_1_unit] == "keV"
     # DEPEND_1 lists 16 energies for 10 pitch-angle bins
-    @test SDM.dim(ds["elb_pef_hs_epa_spec"], 1) == 1:10
+    @test SDM.dims(ds["elb_pef_hs_epa_spec"], 1) == 1:10
 
     t0, t1 = DateTime("2021-09-14T16:23:44.432"), DateTime("2021-09-14T16:27:35.676")
     sub = var[t0 .. t1]
     idx = findall(in(t0 .. t1), t)
     @test SDM.times(sub) == t[idx]
-    @test SDM.unwrap(SDM.dim(sub, 1)) == SDM.unwrap(SDM.dim(var, 1))[:, idx]
+    @test SDM.unwrap(SDM.dims(sub, 1)) == SDM.unwrap(SDM.dims(var, 1))[:, idx]
 
     @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
     @test !SDM.hastimedim(ds["elb_pef_hs_time"])
