@@ -47,10 +47,13 @@ end
 py_cdf_type(var::Py) = pyconvert(Int, @py var.type.value)
 
 function py2jlattrib(py, name)
-    at = @py py.attributes[name]
+    return attribute_value(@py py.attributes[name])
+end
+
+function attribute_value(at)
     v = @py at.value
     return if pyisinstance(v, pybuiltins.list)
-        pyconvert(PyList, v)
+        pyconvert(Vector{Any}, v)
     else
         pyconvert(Any, v)
     end

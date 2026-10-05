@@ -1,11 +1,7 @@
-function _concat_variables(arrays; name = CDM.name(first(arrays)), metadata = CDM.attrib(first(arrays)), dim = nothing, parentdataset = nothing)
-    d = @something dim ndims(first(arrays))
-    sz = map(ntuple(identity, d)) do i
-        i == d ? length(arrays) : 1
-    end
-    cdas = reshape(_as_array(arrays), sz)
-    data = _irregular_chunks(DiskArrays.ConcatDiskArray(_storage_parent.(cdas)))
-    return CDFVariable(data, name, parentdataset, metadata)
+# Lazy concatenation of `parts` along dimension `dim`
+function _concat(parts, dim)
+    sz = ntuple(i -> i == dim ? length(parts) : 1, dim)
+    return _irregular_chunks(DiskArrays.ConcatDiskArray(reshape(_as_array(parts), sz)))
 end
 
 # ConcatDiskArray picks RegularChunks or IrregularChunks depending on whether the parts have
@@ -21,9 +17,6 @@ _as_irregular(c) = DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, le
 
 _as_array(arrays::AbstractArray) = arrays
 _as_array(arrays) = collect(arrays)
-
-_storage_parent(var::CDFVariable) = parent(var)
-_storage_parent(data) = data
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
 # Like _concat_diskarray_block_io but faster
@@ -48,8 +41,7 @@ _storage_parent(data) = data
     return
 end
 
-function DiskArrays.readblock!(a::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}, aout, inds::AbstractUnitRange...) where {T, N}
-    data = a.data
+function _readraw!(data::DiskArrays.ConcatDiskArray, aout, inds...)
     fast_concat_diskarray_block_io(data, inds...) do outer_range, array_range, I
         aout[outer_range...] = data.parents[I][array_range...]
     end
@@ -60,17 +52,20 @@ _cat(A...) = cat(A...; dims = Val(ndims(A[1])))
 
 # Performance boost over generic DiskArrays path
 function Base.Array(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where {T, N}
-    vars = var.data.parents
-    d = ndims(var)
-    f = d == 1 ? vcat : (d == 2 ? hcat : _cat)
-    return reduce(f, Array.(vars))
+    vars = parent(var).parents
+    size(vars, N) == length(vars) || return var[ntuple(_ -> Colon(), N)...]  # not along the last dimension
+    f = N == 1 ? vcat : (N == 2 ? hcat : _cat)
+    A = reduce(f, Array.(vars))
+    m = _mask(var)
+    isnothing(m) && return A
+    return SDM.mask_invalid!(eltype(A) === T ? A : similar(A, T), A, m, 1)
 end
 
-function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
-    return _concat_variables((A1, As...); dim = dims)
-end
+# Each part decodes itself, so parts may differ in checks and stored type.
+Base.cat(A1::CDFVariable, As::CDFVariable...; dims) =
+    CDFVariable(_concat((A1, As...), dims), CDM.name(A1), nothing, CDM.attrib(A1), nothing)
 
 @inline function CDM.dataset(var::CDFVariable{T, N, <:DiskArrays.ConcatDiskArray}) where {T, N}
-    ds = var.parentdataset
-    return isnothing(ds) ? CDFDataset(CDM.dataset.(var.data.parents)) : ds
+    ds = getfield(var, :parentdataset)
+    return isnothing(ds) ? CDFDataset(CDM.dataset.(parent(var).parents)) : ds
 end

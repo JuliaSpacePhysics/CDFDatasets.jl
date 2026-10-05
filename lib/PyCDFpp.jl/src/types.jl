@@ -26,6 +26,6 @@ struct PyDictWrapper
     py::Py
 end
 
-Base.getindex(d::PyDictWrapper, key) = d.py[key]
-Base.get(d::PyDictWrapper, key, default::String) = pyconvert(String, get(d.py, key, default).value)
+Base.getindex(d::PyDictWrapper, key) = attribute_value(d.py[key])
+Base.get(d::PyDictWrapper, key, default) = pyin(key, d.py) ? d[key] : default
 Base.keys(d::PyDictWrapper) = py2jlkeys(d.py)
