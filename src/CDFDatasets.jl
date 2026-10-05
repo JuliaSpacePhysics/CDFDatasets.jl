@@ -24,7 +24,7 @@ export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export dim, depend
 export is_record_varying
-export sanitize, fillvalue, materialize
+export fillvalue, materialize
 export ..
 export variable
 
@@ -38,7 +38,6 @@ include("istp.jl")
 include("CommonDataFormat.jl")
 include("concat.jl")
 include("subvariable.jl")
-include("methods.jl")
 include("timeseries.jl")
 include("show.jl")
 

@@ -60,9 +60,18 @@ _parent1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
 _has_interval(ds::CDFDataset) = !isnothing(ds.interval)
 _unclipped(ds::CDFDataset) = CDFDataset(ds.source)
 
-function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing)
-    _has_interval(ds) || return _variable_unclipped(ds, name; metadata)
-    var = _variable_unclipped(_unclipped(ds), name; metadata)
+"""
+    variable(ds, name; metadata, fillval, validmin, validmax) :: CDFVariable
+
+Variable `name` of `ds`, also `ds[name]`. Reads replace values equal to `fillval` or outside
+`[validmin, validmax]` by `NaN`, promoting integers to floats (see `SpaceDataModel.mask_invalid`).
+These default to the `FILLVAL`, `VALIDMIN` and `VALIDMAX` attributes, except for integer
+`support_data` and `metadata` variables (flags, status codes), which read as stored unless given;
+`nothing` disables a check. `parent(var)` is the stored data, decoded once materialized.
+"""
+function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
+    _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)
+    var = _variable_unclipped(_unclipped(ds), name; metadata, kw...)
     is_record_varying(var) || return var
     N = ndims(var)
     is_epoch = eltype(var) <: AbstractDateTime
@@ -89,13 +98,13 @@ function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia)
     return CDFDataset(CDF.CDFDataset.(sources))
 end
 
-function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing)
+function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     ds1 = _parent1(ds)
     var1 = ds1[name]
     md = @something metadata CDM.attrib(var1)
-    return if _is_multi_source(ds) && is_record_varying(var1)
-        _concat_variables(map(source -> source[name], ds.source); name, metadata = md, parentdataset = ds)
-    else
-        CDFVariable(var1, name, ds, md)
-    end
+    data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> source[name], ds.source), ndims(var1)) : var1
+    return _variable(data, name, ds, md, kw)
 end
+
+# `data` is not inferred; a call boundary compiles construction for its concrete type.
+@noinline _variable(data, name, ds, metadata, kw) = CDFVariable(data, name, ds, metadata; kw...)

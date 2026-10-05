@@ -38,6 +38,8 @@ end
             k == v
         end
         @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
+        @test isequal(Array(ds["V"]), Array(ds_py["V"]))
+        @test get(ds_py["V"].metadata, "absent", nothing) === nothing
 
         @testset "py show" begin
             io = IOBuffer()
@@ -72,7 +74,7 @@ end
     var = cat(var1, var2; dims = 1)
     @test var == cat(var1, var2; dims = 1)
     @test var.data isa DiskArrays.ConcatDiskArray
-    @test var.data.parents[1] === parent(var1)
+    @test var.data.parents[1] === var1
     @test var.data == vcat(var1.data, var2.data)
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
@@ -101,7 +103,8 @@ end
         subvar = var[t0 .. t1]
         @test size(subvar) == (25,)
         @test DimArray(subvar).dims[1] ⊆ t0 .. t1
-        @test (@b DimArray(subvar)).time < (@b DimArray(var)).time
+        # reads only the clipped records (timing at this size measures fixed overhead)
+        @test (@b DimArray(subvar)).bytes < (@b DimArray(var)).bytes
     end
 
     @testset "Dataset view (time clip)" begin
@@ -173,7 +176,7 @@ end
 
         @test ndims(ds["elb_pef_hs_Epat_eflux"]) == 3
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1) == ds["elb_pef_hs_epa_spec"]
+        @test isequal(CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1), ds["elb_pef_hs_epa_spec"])
         @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
         @test is_record_varying(ds["elb_pef_hs_Epat_eflux"]) == true
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
@@ -191,30 +194,58 @@ end
         @test size(CDM.dim(subvar, 2)) == (16, 1)
     end
 
-    @testset "sanitize" begin
+    @testset "decoding on read" begin
         # FILLVAL is NaN here, so only the VALIDMAX range check can change anything
         var = ds["elb_pef_hs_Epat_eflux"]
-        A = Array(var)
-        S = sanitize(var)
-        @test S isa Array{Float32, 3}
+        A = Array(parent(var))
+        S = Array(var)
         @test all(isnan.(S) .== (isnan.(A) .| (A .> only(var.attrib["VALIDMAX"]))))
+        @test isequal(var[2:3, :, 5:6], S[2:3, :, 5:6])
+        @test isequal(materialize(var).data, S)
 
         # Int8 with Int16 FILLVAL; no fill values in this file, but sector numbers fall
         # outside VALIDMIN/VALIDMAX = [0, 32]
         ivar = ds["elb_pef_sectnum"]
-        I = Array(ivar)
+        I = Array(parent(ivar))
         bad = (I .< 0) .| (I .> 32)
         @test any(bad) && !all(bad)
-        F = sanitize(ivar)
+        F = Array(ivar)
         @test F isa Vector{Float32}
         @test isnan.(F) == bad
         @test F[.!bad] == I[.!bad]
-        @test sanitize(ivar; replace_invalid = false) == I
+        @test eltype(variable(ds, "elb_pef_sectnum"; fillval = nothing, validmin = nothing, validmax = nothing)) == Int8
+        # integer support_data (a status code) keeps stored values unless checks are given
+        po = cdfopen(data_path("po_h1_tim_00000000_v01.cdf"))
+        @test eltype(po["Quality"]) == UInt8
+        @test eltype(variable(po, "Quality"; validmax = 0)) == Float32
 
-        # per-component VALIDMIN/VALIDMAX broadcast along dim 1
+        # per-component VALIDMIN/VALIDMAX along dim 1, also for a block of components
         A = Float32[1 5 9; 2 6 10; 3 7 11]
-        v = CDF.CDFVariable(A, "v", nothing, Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11]))
-        @test isnan.(sanitize(v)) == Bool[0 1 1; 1 0 1; 1 1 0]
+        md = Dict("VALIDMIN" => [1, 6, 11], "VALIDMAX" => [1, 6, 11])
+        expected = Bool[0 1 1; 1 0 1; 1 1 0]
+        @test isnan.(Array(CDF.CDFVariable(A, "v", nothing, md))) == expected
+        lazy = CDF.CDFVariable(view(A, :, :), "v", nothing, md)
+        @test isnan.(lazy[2:3, :]) == expected[2:3, :]
+        decoded = Array(lazy)
+        @test isequal(Array(view(lazy, 2:3, :)), decoded[2:3, :])
+        @test isequal(Array(view(view(lazy, 2:3, :), 2:2, :)), decoded[3:3, :])
+        @test isequal(Array(selectdim(lazy, 1, 2)), decoded[2, :])
+        @test isequal(Array(view(lazy, :)), vec(decoded))
+        @test isequal(Array(reshape(lazy, (1, 9))), reshape(decoded, 1, 9))
+        @test isequal(Array(cat(lazy, lazy; dims = 1)), vcat(decoded, decoded))
+        # bounds whose length matches no dimension: equal values act as one, others are dropped
+        scalar = CDF.CDFVariable(view(Float32[1, -7.0e4], :), "s", nothing, Dict("VALIDMIN" => [-6.0e4, -6.0e4, -6.0e4]))
+        @test isnan.(Array(scalar)) == [false, true]
+        garbage = CDF.CDFVariable(view(Float32[1, 2.0e7], :), "g", nothing, Dict("VALIDMAX" => [1.0e7, 7.0e22, 7.0e-13]))
+        @test !any(isnan, Array(garbage))
+        precise = 1.0 + 2.0^-40
+        mixedtypes = CDF.CDFVariable(CDF._concat((Float32[1], [precise]), 1), "mixed", nothing, Dict("FILLVAL" => -999))
+        @test Array(mixedtypes) == [1.0, precise]
+
+        raw = variable(ds, "elb_pef_sectnum"; fillval = nothing, validmin = nothing, validmax = nothing)
+        mixed = cat(raw, ivar; dims = 1)
+        @test isequal(Array(mixed), vcat(Array(raw), Array(ivar)))
+        @test isequal(mixed[2:end-1], Array(mixed)[2:end-1])
     end
 
 end
