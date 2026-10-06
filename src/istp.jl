@@ -2,15 +2,11 @@
 # [ISTP Metadata Guidelines: Global Attributes](https://spdf.gsfc.nasa.gov/istp_guide/gattributes.html)
 # [ISTP Metadata Guidelines: Variables](https://spdf.gsfc.nasa.gov/istp_guide/variables.html)
 
+# Values are free-form strings ("1", "01", "2.0", "v3.4.0"); VersionNumber parses all and orders them correctly.
 function data_version(ds)
-    dv = attrib(ds, "Data_version")
-    if dv isa String
-        return parse(Int, dv)
-    elseif dv isa AbstractVector
-        return parse(Int, only(dv))
-    end
+    dv = get(CDM.attribs(ds), "Data_version", nothing)
+    isnothing(dv) && return nothing
+    v = dv isa AbstractVector ? only(dv) : dv
+    return VersionNumber(v isa AbstractString ? strip(v) : v)
 end
 var_type(var) = get(var.metadata, "VAR_TYPE", "")
-
-valid_min(var) = attrib(var, "VALIDMIN")
-valid_max(var) = attrib(var, "VALIDMAX")

@@ -147,7 +147,7 @@ end
     elx_file = data_path("elb_l2_epdef_20210914_v01.cdf")
     ds = cdfopen(elx_file)
     @testset "Basic CDF Reading" begin
-        @test CDF.data_version(ds) == 1
+        @test CDF.data_version(ds) == v"1"
         @test CDM.name(ds) == "elb_l2_epdef"
 
         # Test getting variable names
