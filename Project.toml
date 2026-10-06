@@ -25,7 +25,7 @@ CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
 
 [compat]
-CommonDataFormat = "0.2, 0.3"
+CommonDataFormat = "0.2, 0.3, 0.4"
 CommonDataModel = "0.4"
 Dates = "1"
 DimensionalData = "0.29, 0.30"
