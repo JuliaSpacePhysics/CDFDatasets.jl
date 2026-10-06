@@ -82,14 +82,16 @@ function _show(io::IO, ds::AbstractCDFDataset)
         printstyled(io, indent, "Data variables\n", color = CDM.section_color[])
 
         vars = [ds[name] for name in varnames]
-        for var in filter(var -> var_type(var) == "data", vars)
+        types = map(var_type, vars)
+        for (var, type) in zip(vars, types)
+            type == "data" || continue
             show(IOContext(io, :level => level + 2, :limit => get(io, :limit, false)), var)
             print(io, "\n")
         end
 
-        show_var_names(io, indent, "Support variables: ", filter(var -> var_type(ds[var]) == "support_data", varnames))
-        show_var_names(io, indent, "Metadata variables: ", filter(var -> var_type(ds[var]) == "metadata", varnames))
-        show_var_names(io, indent, "Other variables: ", filter(var -> var_type(ds[var]) ∉ ("data", "support_data", "metadata"), varnames))
+        show_var_names(io, indent, "Support variables: ", varnames[types .== "support_data"])
+        show_var_names(io, indent, "Metadata variables: ", varnames[types .== "metadata"])
+        show_var_names(io, indent, "Other variables: ", varnames[types .∉ Ref(("data", "support_data", "metadata"))])
     end
 
     # global attribues
