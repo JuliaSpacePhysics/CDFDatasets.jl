@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0]
+
 ### Added
 
 - SpaceDataModel time series interface for `CDFVariable` (SpaceDataModel is now a dependency): `tdimnum` from metadata without reading data (`nothing` for non-record-varying variables), `dims` returning in-memory coordinate variables with their attributes (a time-varying `DEPEND_i` is kept whole, sliced like the variable), and `unwrap`.
@@ -13,7 +15,6 @@
 ### Removed
 
 - **Breaking**: `sanitize` (reads decode) and the `replace_fillval`/`replace_invalid` keywords of `DimArray(var)` (use `variable` keywords).
-- **Breaking**: the SpacePhysicsMakie extension; SpacePhysicsMakie plots CDF variables through the SpaceDataModel interface instead of converting them to `DimArray`s.
 
 ### Fixed
 
@@ -32,5 +33,6 @@
 
 - [ ] Full support for `CommonDataModel.jl` interface
 
-[Unreleased]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/tag/v0.2.0
