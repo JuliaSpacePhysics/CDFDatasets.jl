@@ -13,7 +13,7 @@ function _irregular_chunks(a::DiskArrays.ConcatDiskArray{T, N, P, C, HC, ID}) wh
 end
 
 _as_irregular(c::DiskArrays.IrregularChunks) = c
-_as_irregular(c) = DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, length.(c)))
+_as_irregular(c) = DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, Int[length(r) for r in c]))
 
 _as_array(arrays::AbstractArray) = arrays
 _as_array(arrays) = collect(arrays)

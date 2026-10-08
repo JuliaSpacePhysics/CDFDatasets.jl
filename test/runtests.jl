@@ -79,6 +79,10 @@ end
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
     @test CDM.dimnames(var) == CDM.dimnames(var1)
+
+    # files with zero records chunk as RegularChunks(1, 0, 0)
+    empty = CDFVariable(EmptyDiskVector(), "e", nothing, Dict())
+    @test isempty(Array(cat(empty, empty; dims = 1)))
 end
 
 @testset "Multi-file CDFDataset" begin

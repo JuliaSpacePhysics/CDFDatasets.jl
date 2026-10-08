@@ -13,3 +13,9 @@ function download_test_data(url, filename = basename(url))
     end
     return filepath
 end
+
+struct EmptyDiskVector <: DiskArrays.AbstractDiskArray{Float32, 1} end
+Base.size(::EmptyDiskVector) = (0,)
+DiskArrays.haschunks(::EmptyDiskVector) = DiskArrays.Chunked()
+DiskArrays.eachchunk(::EmptyDiskVector) = DiskArrays.GridChunks((DiskArrays.RegularChunks(1, 0, 0),))
+DiskArrays.readblock!(::EmptyDiskVector, aout, r...) = aout
