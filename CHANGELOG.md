@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `cdfopen(files; checks)` and `CDFDataset(source; checks)`: dataset-wide defaults for the `variable` check keywords, e.g. `checks = (; validmin = nothing, validmax = nothing)` for files with placeholder `VALIDMIN`/`VALIDMAX`. Coordinate variables and views inherit them.
+
 ## [0.3.0]
 
 ### Added

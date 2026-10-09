@@ -246,6 +246,17 @@ end
         mixedtypes = CDF.CDFVariable(CDF._concat((Float32[1], [precise]), 1), "mixed", nothing, Dict("FILLVAL" => -999))
         @test Array(mixedtypes) == [1.0, precise]
 
+        # dataset-wide checks reach variables, their coordinates and views; call keywords override them
+        unbounded = cdfopen(elx_file; checks = (; validmin = nothing, validmax = nothing))
+        stored = Array(parent(ds["elb_pef_hs_Epat_eflux"]))
+        @test isequal(Array(unbounded["elb_pef_hs_Epat_eflux"]), stored)
+        @test isequal(Array(variable(unbounded, "elb_pef_hs_Epat_eflux"; validmax = 1.0f6)), Array(ds["elb_pef_hs_Epat_eflux"]))
+        @test isequal(Array(CDM.dim(unbounded["elb_pef_hs_Epat_eflux"], 1)), Array(parent(ds["elb_pef_hs_epa_spec"])))
+        t0, t1 = DateTime("2021-09-14T16:23:44"), DateTime("2021-09-14T16:27:36")
+        clipped = view(unbounded, t0 .. t1)["elb_pef_hs_Epat_eflux"]
+        @test isequal(Array(clipped), Array(parent(view(ds, t0 .. t1)["elb_pef_hs_Epat_eflux"])))
+        @test_throws ArgumentError cdfopen(elx_file; checks = (; valid_max = nothing))
+
         raw = variable(ds, "elb_pef_sectnum"; fillval = nothing, validmin = nothing, validmax = nothing)
         mixed = cat(raw, ivar; dims = 1)
         @test isequal(Array(mixed), vcat(Array(raw), Array(ivar)))

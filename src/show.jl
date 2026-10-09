@@ -64,6 +64,9 @@ function _show(io::IO, ds::AbstractCDFDataset)
     if ds isa CDFDataset && _has_interval(ds)
         print(io, indent, "View: ", ds.interval, "\n")
     end
+    if ds isa CDFDataset && !isempty(ds.checks)
+        print(io, indent, "Checks: ", ds.checks, "\n")
+    end
 
     printstyled(io, indent, "Dataset: ", CDM.path(ds), "\n", color = CDM.section_color[])
 
