@@ -18,6 +18,18 @@ times = ds["Epoch"]
 bx = ds["BR"]
 ```
 
+## Missing values
+
+Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component along dimension 1), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
+
+```julia
+var = ds["BR"]                                                      # lazy: nothing read yet
+Array(var)                                                          # reads and decodes; `var[i]` reads part
+parent(var)                                                         # stored on-disk data, undecoded
+variable(ds, "BR"; validmax = nothing)                              # one variable: override `fillval`/`validmin`/`validmax`; `nothing` disables
+cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
+```
+
 ## Features
 
 It provides a high-level interface with features:

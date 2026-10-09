@@ -48,10 +48,10 @@ include("show.jl")
 Opens CDF file(s) as a `AbstractCDFDataset`, and restricts record-varying variables to `[t0, t1)` when provided.
 """
 cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
-function cdfopen(files; backend = :julia, kw...)
+function cdfopen(files; backend = :julia, checks = (;), kw...)
     backend = Symbol(backend)
     @assert backend in (:julia, :CommonDataFormat)
-    return CDFDataset(CDF.CDFDataset.(files))
+    return CDFDataset(CDF.CDFDataset.(files); checks)
 end
 
 cdfopen(files, t0, t1; kw...) = view(cdfopen(files; kw...), Interval{:closed,:open}(t0, t1))
