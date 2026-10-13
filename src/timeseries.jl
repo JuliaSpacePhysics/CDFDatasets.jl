@@ -22,6 +22,7 @@ function SDM.dims(var::CDFVariable, i::Integer)
 end
 
 SDM.unwrap(var::CDFVariable) = parent(_inmemory(var))
+SDM.axiskeys(var::CDFVariable, i::Integer) = SDM.unwrap(SDM.dims(var, i))
 
 _inmemory(var) = parent(var) isa Array ? var : materialize(var)
 
