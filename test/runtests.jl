@@ -79,10 +79,17 @@ end
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
     @test CDM.dimnames(var) == CDM.dimnames(var1)
+    m = materialize(var)
+    @test CDM.dimnames(m) == CDM.dimnames(var1)
+    @test is_record_varying(m)
+    @test SDM.times(m) == vcat(SDM.times(var1), SDM.times(var2))
 
     # files with zero records chunk as RegularChunks(1, 0, 0)
     empty = CDFVariable(EmptyDiskVector(), "e", nothing, Dict())
     @test isempty(Array(cat(empty, empty; dims = 1)))
+    padded = cat(empty, var1, empty; dims = 1)
+    @test size(padded) == size(var1)
+    @test isequal(padded[:], var1[:])
 end
 
 @testset "Multi-file CDFDataset" begin
@@ -309,7 +316,7 @@ end
 
     @test data isa Array
 
-    @test_broken cdf_type(var) == cdf_type(disk_var)
+    @test cdf_type(var) == cdf_type(disk_var)
     @test disk_var .* 2 isa DiskArrays.BroadcastDiskArray
     @test CDM.dimnames(var) == CDM.dimnames(disk_var)
     @test CDM.dimnames(var, 1) == CDM.dimnames(disk_var, 1)
