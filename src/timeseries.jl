@@ -3,7 +3,7 @@ function SDM.tdimnum(var::CDFVariable)
     dname = dimvarname(var, N)
     (isnothing(dname) || !is_record_varying(var)) && return nothing
     dname == dimnames(var, N) || return N  # swapped in DEPEND_TIME
-    return eltype(_parent1(dataset(var))[dname]) <: AbstractDateTime ? N : nothing
+    return eltype(_source1(dataset(var))[dname]) <: AbstractDateTime ? N : nothing
 end
 
 """

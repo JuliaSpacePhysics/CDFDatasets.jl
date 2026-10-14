@@ -68,7 +68,7 @@ Base.view(ds::AbstractCDFDataset, interval::Interval) =
 const SymbolString = Union{String, Symbol}
 
 _is_multi_source(ds::CDFDataset) = ds.source isa AbstractVector
-_parent1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
+_source1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
 _has_interval(ds::CDFDataset) = !isnothing(ds.interval)
 _unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks)
 
@@ -92,11 +92,11 @@ function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw
     return selectdim(var, N, indices)
 end
 
-CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_parent1(ds))
+CDM.varnames(ds::AbstractCDFDataset) = CDM.varnames(_source1(ds))
 # CommonDataModel's fallback allocates every variable name.
-Base.haskey(ds::AbstractCDFDataset, name::SymbolString) = haskey(_parent1(ds), String(name))
-CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_parent1(ds))
-CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_parent1(ds), name)
+Base.haskey(ds::AbstractCDFDataset, name::SymbolString) = haskey(_source1(ds), String(name))
+CDM.attribnames(ds::AbstractCDFDataset) = CDM.attribnames(_source1(ds))
+CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_source1(ds), name)
 
 CDM.path(ds::CDFDataset) = _is_multi_source(ds) ? CDM.path.(parent(ds)) : CDM.path(parent(ds))
 CDM.name(ds::AbstractCDFDataset) = join(get(ds.attrib, "Logical_source", '/'), '/')
@@ -108,7 +108,7 @@ function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia,
 end
 
 function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
-    ds1 = _parent1(ds)
+    ds1 = _source1(ds)
     var1 = ds1[name]
     md = @something metadata CDM.attrib(var1)
     data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> source[name], ds.source), ndims(var1)) : var1
