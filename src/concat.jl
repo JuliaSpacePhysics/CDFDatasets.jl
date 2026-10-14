@@ -1,28 +1,32 @@
-# Lazy concatenation of `parts` along dimension `dim`
-function _concat(parts, dim)
-    sz = ntuple(i -> i == dim ? length(parts) : 1, dim)
-    return _normalize(DiskArrays.ConcatDiskArray(reshape(_as_array(parts), sz)), dim)
+# Lazy concatenation of `parts` along dimension `dim`, built directly because
+# `DiskArrays.ConcatDiskArray(parts)` compiles slowly per part type, and it
+# - picks RegularChunks or IrregularChunks by whether part lengths are equal, giving the same
+#   variable a different type per file set; IrregularChunks throughout keeps one type.
+# - counts a zero-length part as length 1 (`arraysize_and_startinds` marks unset sizes with 0).
+# Only sizes and chunks of `parts` are read, so one unspecialized method serves every part type.
+_concat(@nospecialize(parts), dim) = _concat(parts, dim, Val(max(ndims(first(parts)), dim)))
+
+function _concat(@nospecialize(parts), dim, ::Val{N}) where {N}
+    p1 = first(parts)
+    for p in parts, d in 1:N
+        d == dim || size(p, d) == size(p1, d) || throw(DimensionMismatch("parts differ in size along dimension $d"))
+    end
+    lens = Int[size(p, dim) for p in parts]
+    startinds = ntuple(d -> d == dim ? cumsum([1; lens[1:(end - 1)]]) : [1], Val(N))
+    sz = ntuple(d -> d == dim ? sum(lens) : size(p1, d), Val(N))
+    chunks = DiskArrays.GridChunks(ntuple(Val(N)) do d
+        sizes = d == dim ? Int[n for p in parts for n in _chunksizes(p, d)] : _chunksizes(p1, d)
+        DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, sizes))
+    end)
+    hc = DiskArrays.Chunked(DiskArrays.batchstrategy(chunks))
+    T = mapreduce(eltype, promote_type, parts)
+    parents = reshape(collect(parts), ntuple(d -> d == dim ? length(parts) : 1, Val(N)))
+    return DiskArrays.ConcatDiskArray{T, N, typeof(parents), typeof(chunks), typeof(hc), ndims(p1)}(
+        parents, startinds, sz, chunks, hc, Val(ndims(p1))
+    )
 end
 
-# ConcatDiskArray picks RegularChunks or IrregularChunks depending on whether the parts have
-# equal lengths, so the same variable would get a different type (and separately compiled and
-# precompiled code) per file set. Always using IrregularChunks keeps one type.
-# Its sizes also count a zero-length part as length 1 (`arraysize_and_startinds` marks unset
-# sizes with 0), so they are recomputed from the parts.
-function _normalize(a::DiskArrays.ConcatDiskArray{T, N, P, C, HC, ID}, dim) where {T, N, P, C, HC, ID}
-    chunks = DiskArrays.GridChunks(map(_as_irregular, a.chunks.chunks))
-    lens = Int[size(p, dim) for p in a.parents]
-    p1 = first(a.parents)
-    startinds = ntuple(d -> d == dim ? cumsum([1; lens[1:(end - 1)]]) : [1], N)
-    sz = ntuple(d -> d == dim ? sum(lens) : size(p1, d), N)
-    return DiskArrays.ConcatDiskArray{T, N, P, typeof(chunks), HC, ID}(a.parents, startinds, sz, chunks, a.haschunks, a.innerdims)
-end
-
-_as_irregular(c::DiskArrays.IrregularChunks) = c
-_as_irregular(c) = DiskArrays.IrregularChunks(; chunksizes = filter!(!iszero, Int[length(r) for r in c]))
-
-_as_array(arrays::AbstractArray) = arrays
-_as_array(arrays) = collect(arrays)
+_chunksizes(a, d) = d <= ndims(a) ? Int[length(r) for r in DiskArrays.eachchunk(a).chunks[d]] : [1]
 
 # https://github.com/JuliaIO/DiskArrays.jl/blob/main/src/cat.jl#L10
 # Like _concat_diskarray_block_io but faster
