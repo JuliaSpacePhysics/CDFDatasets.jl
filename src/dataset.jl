@@ -110,7 +110,7 @@ end
 function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     ds1 = _source1(ds)
     var1 = ds1[name]
-    md = @something metadata CDM.attrib(var1)
+    md = @something metadata istp_attrib(CDM.attrib(var1), ds1)
     data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> source[name], ds.source), ndims(var1)) : var1
     return _variable(data, name, ds, md, merge(ds.checks, values(kw)))
 end

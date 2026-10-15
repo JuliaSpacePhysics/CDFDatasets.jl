@@ -313,6 +313,15 @@ end
     @test SDM.ISTPSchema()(SDM.DataVariable(vc)[2:3, :], :labels) == vc.attrib["LABL_PTR_1"][2:3]
 end
 
+@testset "LABL_PTR resolution" begin
+    ds = cdfopen(data_path("labl_ptr.cdf"))
+    @test ds["dangling"].attrib["LABL_PTR_1"] == "CARTESIAN"
+    @test ds["ok"].attrib["LABL_PTR_1"] == ["Bx", "By", "Bz"]
+    @test Dict(ds["ok"].attrib)["LABL_PTR_1"] == ["Bx", "By", "Bz"]
+    @test cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_V"].attrib["LABL_PTR_1"] ==
+        ["Ion Bulk Speed", "Ion Bulk Polar Angle", "Ion Bulk Azimuth Angle"]
+end
+
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")
     ds = CDFDataset(test_file)
