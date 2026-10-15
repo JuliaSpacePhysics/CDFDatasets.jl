@@ -20,12 +20,15 @@ SpaceDataModel = "0b37b92c-f0c5-4a52-bd5c-390dec20857c"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 PyCDFpp = "8480bde4-bc3c-44e7-baab-4ff1aa53fe88"
 
+[sources]
+SpaceDataModel = {path = "../SpaceDataModel.jl"}
+
 [extensions]
 CDFDatasetsDimensionalDataExt = "DimensionalData"
 CDFDatasetsPyCDFppExt = "PyCDFpp"
 
 [compat]
-CommonDataFormat = "0.2, 0.3, 0.4"
+CommonDataFormat = "0.4"
 CommonDataModel = "0.4"
 Dates = "1"
 DimensionalData = "0.29, 0.30"

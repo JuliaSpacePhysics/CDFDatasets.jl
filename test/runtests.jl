@@ -299,6 +299,18 @@ end
 
     @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
     @test !SDM.hastimedim(ds["elb_pef_hs_time"])
+
+    # indexing a DataVariable keeps the time dimension and coordinates; rebuilds do too
+    dv = SDM.DataVariable(var)
+    for r in (dv[2, :, :], SDM.rebuild(var, 2 .* Array(var)))
+        @test r isa SDM.DataVariable && SDM.times(r) == t
+        @test SDM.unwrap(SDM.dims(r, ndims(r) - 1)) == energies
+    end
+    @test SDM.getmeta(SDM.dims(dv[:, 3:4, :], 2), "UNITS") == "keV"
+
+    # LABL_PTR_1 rides on the DEPEND_1 coordinate through slicing
+    vc = cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_Vc"]
+    @test SDM.ISTPSchema()(SDM.DataVariable(vc)[2:3, :], :labels) == vc.attrib["LABL_PTR_1"][2:3]
 end
 
 @testset "CDFDataset" begin
