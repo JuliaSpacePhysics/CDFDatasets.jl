@@ -1,5 +1,5 @@
 # LABL_PTR_1 pointing at an existing variable and at a missing one (seen in IM_K0_EUV), and labelling a
-# record-varying DEPEND_1.
+# record-varying DEPEND_1; an epoch naming itself as its DEPEND_0.
 # Run: uv run --with cdflib python data/make_labl_ptr.py data/labl_ptr.cdf
 import sys
 import numpy as np
@@ -17,4 +17,6 @@ c.write_var({"Variable": "epoch", "Data_Type": 31, "Num_Elements": 1, "Rec_Vary"
 c.write_var({**vec, "Variable": "energy"}, var_attrs={"DEPEND_0": "epoch"}, var_data=np.arange(6.0).reshape(2, 3))
 c.write_var({**vec, "Variable": "flux"}, var_attrs={"DEPEND_0": "epoch", "DEPEND_1": "energy", "LABL_PTR_1": "labels"},
             var_data=np.ones((2, 3)))
+c.write_var({"Variable": "self_epoch", "Data_Type": 31, "Num_Elements": 1, "Rec_Vary": True, "Dim_Sizes": []},
+            var_attrs={"DEPEND_0": "self_epoch"}, var_data=np.array(CDFepoch.compute_epoch([[2020, 1, 1, 0, 0, 0, 0], [2020, 1, 1, 0, 1, 0, 0]])))
 c.close()

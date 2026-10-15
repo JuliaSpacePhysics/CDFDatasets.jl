@@ -9,18 +9,17 @@ end
 """
     SpaceDataModel.dims(var::CDFVariable, i)
 
-In-memory coordinate variable of dimension `i` (its `DEPEND`), else `axes(var, i)` (also when the
-`DEPEND` does not fit). A non-record-varying coordinate loses its length-1 record dimension; a
-record-varying one keeps its records, sliced like `var`.
+Coordinate of dimension `i`: its `DEPEND`, lazily, else `axes(var, i)` (also when the `DEPEND`
+does not fit). A non-record-varying coordinate loses its length-1 record
+dimension; a record-varying one keeps its records, sliced like `var`.
 """
 SDM.dims(var::CDFVariable, i::Integer) = @something _depend(var, i) axes(var, i)
 
 # A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
 function _depend(var::CDFVariable, i::Integer)
-    dv = depend(var, i)
-    (isnothing(dv) || CDM.name(dv) == get(CDM.attrib(var), "LABL_PTR_$i", nothing)) && return nothing
-    c = _inmemory(dv)
-    i == ndims(var) || is_record_varying(dv) || (c = _droprecord(c))
+    c = depend(var, i)
+    (isnothing(c) || CDM.name(c) == get(CDM.attrib(var), "LABL_PTR_$i", nothing)) && return nothing
+    i == ndims(var) || is_record_varying(c) || (c = _droprecord(c))
     return _fits(c, var, i) ? c : nothing
 end
 
@@ -59,11 +58,9 @@ function SDM.rebuild(var::CDFVariable, data, newdims::Tuple)
 end
 _axis(::Val{i}) where {i} = i
 
-SDM.unwrap(var::CDFVariable) = parent(_inmemory(var))
+SDM.unwrap(var::CDFVariable) = Array(var)
 SDM.axiskeys(var::CDFVariable, i::Integer) = SDM.unwrap(SDM.dims(var, i))
 
-_inmemory(var) = parent(var) isa Array ? var : materialize(var)
-
-_droprecord(v) = ndims(v) > 1 && size(v, ndims(v)) == 1 ? rebuild(v, dropdims(parent(v); dims = ndims(v))) : v
+_droprecord(c) = ndims(c) > 1 && size(c, ndims(c)) == 1 ? view(c, ntuple(_ -> :, ndims(c) - 1)..., 1) : c
 
 _fits(c, var, i) = ndims(c) == 1 ? length(c) == size(var, i) : size(c) == (size(var, i), size(var, ndims(var)))

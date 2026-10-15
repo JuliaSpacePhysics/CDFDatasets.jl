@@ -15,6 +15,7 @@
 
 - **Breaking**: `fillvalue`, the ISTP recommended `FILLVAL` per type (CommonDataFormat 0.5 dropped it).
 - **Breaking**: the PyCDFpp backend and the `backend` keyword of `CDFDataset`.
+- **Breaking**: `materialize` and in-memory `CDFVariable`s. `SpaceDataModel.DataVariable(var)` reads a variable into memory with its coordinates and attributes, `Array(var)` its data alone; `getdim(var, i)` coordinates are lazy `CDFVariable`s.
 
 ## [0.3.0]
 

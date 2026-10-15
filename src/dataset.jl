@@ -56,7 +56,7 @@ _unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks)
     variable(ds, name; metadata, fillval, validmin, validmax) :: CDFVariable
 
 Variable `name` of `ds`, also `ds[name]`. The keywords override the dataset's `checks` and the
-attributes (README: Missing values). A materialized variable stores decoded data.
+attributes (README: Missing values).
 """
 function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)

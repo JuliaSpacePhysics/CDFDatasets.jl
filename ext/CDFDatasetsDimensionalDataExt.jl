@@ -17,7 +17,7 @@ function format_dim(data, i)
     c = SDM.dims(data, i)
     c isa AbstractCDFVariable || return DT(@something _labelkeys(data, i) c)
     ndims(c) == 1 || return DT(axes(data, i))
-    return DT(vec(parent(c)); metadata = SDM.getmeta(c))
+    return DT(vec(Array(c)); metadata = CDM.attrib(c))
 end
 _labelkeys(data, i) = (l = CDFDatasets._labels(data, i); isnothing(l) ? nothing : parent(l))
 

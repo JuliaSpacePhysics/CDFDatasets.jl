@@ -24,7 +24,6 @@ export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export dim, depend
 export is_record_varying
-export materialize
 export ..
 export variable
 
@@ -33,7 +32,6 @@ abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
 
 include("dataset.jl")
 include("variable.jl")
-include("materialize.jl")
 include("istp.jl")
 include("concat.jl")
 include("subvariable.jl")
