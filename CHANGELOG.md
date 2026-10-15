@@ -4,6 +4,7 @@
 
 ### Added
 
+- `var.attrib["LABL_PTR_i"]` resolves to the labels with trailing space padding stripped (moved from CommonDataFormat, which now returns the stored name).
 - `SpaceDataModel.DataVariable(var)` reads a `CDFVariable` into a `DataVariable`, and TimeseriesUtilities operations on a `CDFVariable` return `DataVariable`s.
 - `getdim(var, i)` carries the `LABL_PTR_i` labels: as the first dimension of the `DEPEND_i` coordinate (then a `DataVariable`), or as the dimension itself when there is no `DEPEND_i`.
 - `cdfopen(files; checks)` and `CDFDataset(source; checks)`: dataset-wide defaults for the `variable` check keywords, e.g. `checks = (; validmin = nothing, validmax = nothing)` for files with placeholder `VALIDMIN`/`VALIDMAX`. Coordinate variables and views inherit them.

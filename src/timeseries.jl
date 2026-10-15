@@ -23,7 +23,7 @@ function SDM.dims(var::CDFVariable, i::Integer)
     return isnothing(labels) ? c : _labeled(c, labels)
 end
 
-# `LABL_PTR_i`, which CommonDataFormat resolves to the labels, when it fits dimension `i`.
+# `LABL_PTR_i` labels (see `ISTPAttrib`), when they fit dimension `i`.
 function _labels(var::CDFVariable, i::Integer)
     l = get(CDM.attrib(var), "LABL_PTR_$i", nothing)
     return l isa AbstractVector{<:AbstractString} && length(l) == size(var, i) ? l : nothing
