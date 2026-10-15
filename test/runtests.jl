@@ -299,6 +299,21 @@ end
 
     @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
     @test !SDM.hastimedim(ds["elb_pef_hs_time"])
+
+    dv = SDM.DataVariable(var)
+    # rebuilds that drop or replace the time axis keep the other coordinates
+    for r in (SDM.rebuild(var, zeros(10, 16), (Val(1), Val(2))), SDM.rebuild(var, zeros(10, 16, 2), 3, t[1:2]))
+        @test SDM.unwrap(SDM.dims(r, 2)) == energies
+    end
+    @test SDM.times(SDM.rebuild(var, zeros(10, 16, 2), 3, t[1:2])) == t[1:2]
+    @test SDM.getmeta(SDM.dims(dv[:, 3:4, :], 2), "UNITS") == "keV"
+
+    # LABL_PTR_1 of a dimension with a DEPEND_1 is a coordinate, which follows slicing
+    vc = cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_Vc"]
+    @test only(SDM.coords(SDM.DataVariable(vc)[2:3, :])).data == vc.attrib["LABL_PTR_1"][2:3]
+    flux = SDM.DataVariable(cdfopen(data_path("labl_ptr.cdf"))["flux"])  # record-varying DEPEND_1
+    @test SDM.dims(flux[2:3, 2:2], 1) == [4.0; 5.0;;]
+    @test only(SDM.coords(flux[2:3, :])).data == ["By", "Bz"]
 end
 
 @testset "CDFDataset" begin

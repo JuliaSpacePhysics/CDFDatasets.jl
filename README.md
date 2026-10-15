@@ -20,7 +20,7 @@ bx = ds["BR"]
 
 ## Missing values
 
-Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component along dimension 1), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
+Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
 
 ```julia
 var = ds["BR"]                                                      # lazy: nothing read yet
@@ -29,6 +29,12 @@ parent(var)                                                         # stored on-
 variable(ds, "BR"; validmax = nothing)                              # one variable: override `fillval`/`validmin`/`validmax`; `nothing` disables
 cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
 ```
+
+## Time series
+
+`CDFVariable`s implement the [SpaceDataModel](https://github.com/JuliaSpacePhysics/SpaceDataModel.jl) / [TimeseriesUtilities](https://github.com/JuliaSpacePhysics/TimeseriesUtilities.jl) container interface: `times(var)`, `dims(var, i)` (the `DEPEND_i` coordinate, with its attributes), and operations such as `tmean(var, Minute(5)) :: DataVariable`.
+
+- `DataVariable(var)` reads it into memory whose indexing keeps the time dimension, sliced coordinates and attributes; `DataVariable(view(var, :, 1:10))` reads part.
 
 ## Features
 
