@@ -310,10 +310,22 @@ end
 
     # LABL_PTR_1 of a dimension with a DEPEND_1 is a coordinate, which follows slicing
     vc = cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_Vc"]
-    @test last(only(SDM.coords(SDM.DataVariable(vc)[2:3, :]))) == vc.attrib["LABL_PTR_1"][2:3]
+    @test SDM.ISTPSchema()(SDM.DataVariable(vc)[2:3, :], :labels) == ["Ion Vy GSE", "Ion Vz GSE"]  # the labels LABL_PTR_1 names
     flux = SDM.DataVariable(cdfopen(data_path("labl_ptr.cdf"))["flux"])  # record-varying DEPEND_1
     @test SDM.dims(flux[2:3, 2:2], 1) == [4.0; 5.0;;]
-    @test last(only(SDM.coords(flux[2:3, :]))) == ["By", "Bz"]
+    @test SDM.ISTPSchema()(flux[2:3, :], :labels) == ["By", "Bz"]
+end
+
+@testset "LABL_PTR labels" begin
+    labels(x) = SDM.ISTPSchema()(x, :labels)
+    ds = cdfopen(data_path("labl_ptr.cdf"))
+    @test labels(ds["ok"]) == ["Bx", "By", "Bz"]
+    @test SDM.dims(ds["ok"], 1) === Base.OneTo(3)  # labels are not values
+    @test labels(SDM.DataVariable(ds["ok"])[2:3, :]) == ["By", "Bz"]
+    @test isnothing(labels(ds["dangling"]))
+    @test labels(DimArray(ds["ok"])[X = 2:3]) == ["By", "Bz"]
+    @test labels(cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_V"]) ==
+        ["Ion Bulk Speed", "Ion Bulk Polar Angle", "Ion Bulk Azimuth Angle"]
 end
 
 @testset "CDFDataset" begin

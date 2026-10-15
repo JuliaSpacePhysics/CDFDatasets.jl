@@ -35,6 +35,7 @@ cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every vari
 `CDFVariable`s implement the [SpaceDataModel](https://github.com/JuliaSpacePhysics/SpaceDataModel.jl) / [TimeseriesUtilities](https://github.com/JuliaSpacePhysics/TimeseriesUtilities.jl) container interface: `times(var)`, `dims(var, i)` (the `DEPEND_i` coordinate, with its attributes), and operations such as `tmean(var, Minute(5)) :: DataVariable`.
 
 - `DataVariable(var)` reads it into memory whose indexing keeps the time dimension, sliced coordinates and attributes; `DataVariable(view(var, :, 1:10))` reads part.
+- `LABL_PTR_i` labels, trailing space padding stripped, are a further coordinate along dimension `i` (`SpaceDataModel.coords`); `var.attrib["LABL_PTR_i"]` is the stored name of the labels variable. `DimArray(var)` takes labels as the lookup of a dimension without `DEPEND_i`.
 
 ## Features
 

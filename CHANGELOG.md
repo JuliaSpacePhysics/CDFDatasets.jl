@@ -7,6 +7,14 @@
 - `SpaceDataModel.DataVariable(var)` reads a `CDFVariable` into a `DataVariable`, and TimeseriesUtilities operations on a `CDFVariable` return `DataVariable`s.
 - `cdfopen(files; checks)` and `CDFDataset(source; checks)`: dataset-wide defaults for the `variable` check keywords, e.g. `checks = (; validmin = nothing, validmax = nothing)` for files with placeholder `VALIDMIN`/`VALIDMAX`. Coordinate variables and views inherit them.
 
+### Changed
+
+- **Breaking**: `var.attrib["LABL_PTR_i"]` is the stored variable name (CommonDataFormat 0.5 no longer resolves it); the labels it points at have their trailing space padding stripped. `DimArray(var)` takes labels without a `DEPEND_i` as the categorical lookup of that dimension.
+
+### Removed
+
+- **Breaking**: `fillvalue`, the ISTP recommended `FILLVAL` per type (CommonDataFormat 0.5 dropped it).
+
 ## [0.3.0]
 
 ### Added

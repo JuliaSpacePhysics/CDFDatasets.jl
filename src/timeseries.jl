@@ -15,18 +15,25 @@ record-varying one keeps its records, sliced like `var`.
 """
 SDM.dims(var::CDFVariable, i::Integer) = @something _depend(var, i) axes(var, i)
 
+# A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
 function _depend(var::CDFVariable, i::Integer)
     dv = depend(var, i)
-    isnothing(dv) && return nothing
+    (isnothing(dv) || CDM.name(dv) == get(CDM.attrib(var), "LABL_PTR_$i", nothing)) && return nothing
     c = _inmemory(dv)
     i == ndims(var) || is_record_varying(dv) || (c = _droprecord(c))
     return _fits(c, var, i) ? c : nothing
 end
 
-# `LABL_PTR_i`, which CommonDataFormat resolves to the labels, when it fits dimension `i`.
+# Labels of the variable `LABL_PTR_i` names, when they fit dimension `i`, under its name so the pointer
+# finds them. Dangling pointers exist in the wild (e.g. IM_K0_EUV); ISTP writers pad labels with spaces to the CHAR width.
 function _labels(var::CDFVariable, i::Integer)
-    l = get(CDM.attrib(var), "LABL_PTR_$i", nothing)
-    return l isa AbstractVector{<:AbstractString} && length(l) == size(var, i) ? l : nothing
+    p = get(CDM.attrib(var), "LABL_PTR_$i", nothing)
+    source = _source1(dataset(var))
+    p isa AbstractString && haskey(source, p) || return nothing
+    lv = source[p]
+    l = vec(Array(lv))  # `Array` skips DiskArrays indexing
+    eltype(l) <: AbstractString && length(l) == size(var, i) || return nothing
+    return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = CDM.attrib(lv), name = p)
 end
 
 # Labels along dimension `i`, which slicing keeps aligned with it.
