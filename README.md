@@ -42,8 +42,5 @@ cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every vari
 It provides a high-level interface with features:
 
 - Concatenation of multiple CDF files;
-- Multi-backend support ([`CommonDataFormat.jl`](https://github.com/JuliaSpacePhysics/CommonDataFormat.jl) and [`CDFpp` (C++)](https://github.com/SciQLop/CDFpp));
 - Integration with [`DimensionalData.jl`](https://github.com/rafaqz/DimensionalData.jl).
-
-It is recommended to use the native Julia implementation `CommonDataFormat.jl` for reading CDF files. `CDFpp` backend is mainly used for cross-validation, available in the `PyCDFpp` directory.
 

@@ -14,6 +14,7 @@
 ### Removed
 
 - **Breaking**: `fillvalue`, the ISTP recommended `FILLVAL` per type (CommonDataFormat 0.5 dropped it).
+- **Breaking**: the PyCDFpp backend and the `backend` keyword of `CDFDataset`.
 
 ## [0.3.0]
 

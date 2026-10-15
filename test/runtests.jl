@@ -22,34 +22,6 @@ end
 end
 
 
-@testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
-    @static if VERSION >= v"1.11"
-        using PyCDFpp
-        using PyCDFpp: UnixTime
-
-        omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
-        ds = CDFDataset(omni_file)
-        ds_py = CDFDataset(omni_file, backend = PyCDFpp)
-        @test ds isa CDFDataset
-
-        @test PyCDFpp.tt2000_to_datetime_py(ds_py.source.py["Epoch"]) == UnixTime.(ds_py["Epoch"])
-        @test Dates.DateTime.(UnixTime.(ds_py["Epoch"])) == Dates.DateTime.(ds["Epoch"])
-        @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
-            k == v
-        end
-        @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
-        @test isequal(Array(ds["V"]), Array(ds_py["V"]))
-        @test get(ds_py["V"].metadata, "absent", nothing) === nothing
-
-        @testset "py show" begin
-            io = IOBuffer()
-            show(io, MIME"text/plain"(), ds_py)
-            str = String(take!(io))
-            @test occursin("Support variables: Epoch", str)
-        end
-    end
-end
-
 @testset "CDFDataset (Edge cases)" begin
     tha_state_url = "https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/download/v0.1.8/tha_l1_state_20100225_v03.cdf"
     ds = cdfopen(download_test_data(tha_state_url))
