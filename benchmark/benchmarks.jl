@@ -3,6 +3,7 @@ using CDFDatasets
 using CommonDataModel
 using Dates
 using DimensionalData
+using CDFDatasets: SDM
 
 const SUITE = BenchmarkGroup()
 
@@ -24,7 +25,7 @@ const OMNI_MULTI_V = OMNI_MULTI["V"]
 
 const ELFIN_FLUX = ELFIN["elb_pef_hs_Epat_eflux"]
 const ELFIN_SECTNUM = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
-const ELFIN_FLUX_MATERIALIZED = materialize(ELFIN_FLUX)
+const ELFIN_FLUX_INMEMORY = SDM.DataVariable(ELFIN_FLUX)
 
 const CLIP = DateTime(2020, 5, 3) .. DateTime(2020, 5, 4)
 const OMNI_MULTI_VIEW = view(OMNI_MULTI, CLIP)
@@ -33,12 +34,12 @@ SUITE["variable"]["disk"]["sum"] = @benchmarkable sum($ELFIN_FLUX)
 SUITE["variable"]["disk"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX)
 SUITE["variable"]["disk"]["broadcast-realized"] = @benchmarkable Array($ELFIN_FLUX .* 2)
 
-SUITE["variable"]["materialized"]["sum"] = @benchmarkable sum($ELFIN_FLUX_MATERIALIZED)
-SUITE["variable"]["materialized"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX_MATERIALIZED)
-SUITE["variable"]["materialized"]["broadcast"] = @benchmarkable $ELFIN_FLUX_MATERIALIZED .* 2
+SUITE["variable"]["in-memory"]["sum"] = @benchmarkable sum($ELFIN_FLUX_INMEMORY)
+SUITE["variable"]["in-memory"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX_INMEMORY)
+SUITE["variable"]["in-memory"]["broadcast"] = @benchmarkable $ELFIN_FLUX_INMEMORY .* 2
 
-SUITE["variable"]["materialize"]["omni-v"] = @benchmarkable materialize($OMNI_V)
-SUITE["variable"]["materialize"]["elfin-flux"] = @benchmarkable materialize($ELFIN_FLUX)
+SUITE["variable"]["DataVariable"]["omni-v"] = @benchmarkable SDM.DataVariable($OMNI_V)
+SUITE["variable"]["DataVariable"]["elfin-flux"] = @benchmarkable SDM.DataVariable($ELFIN_FLUX)
 
 SUITE["decode"]["float-3d"] = @benchmarkable Array($ELFIN_FLUX)
 SUITE["decode"]["float-3d-raw"] = @benchmarkable Array(parent($ELFIN_FLUX))

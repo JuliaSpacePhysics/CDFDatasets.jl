@@ -39,24 +39,18 @@ CDFVariable(data, name, parentdataset, metadata, mask::SDM.ValidityChecks) =
 _decoded(::SDM.ValidityChecks{C}) where {C} = C
 
 # Float variables always get checks, as no-ops without attributes, so they share one type and read
-# path; `nothing` keeps an integer variable's stored type. In-memory data is stored decoded, so
-# `Array`-backed variables read `data` directly.
+# path; `nothing` keeps an integer variable's stored type.
 function CDFVariable(data, name, parentdataset, metadata; fillval = FromAttrib(), validmin = FromAttrib(), validmax = FromAttrib())
     fillval, validmin, validmax = _resolve_checks((fillval, validmin, validmax), data, metadata)
     T = eltype(data)
     checked = T <: AbstractFloat || T <: Real && !all(isnothing, (fillval, validmin, validmax))
     mask = checked ? SDM.ValidityChecks(T, fillval, validmin, validmax) : nothing
-    data isa Array && !isnothing(mask) &&
-        return CDFVariable(SDM.mask_invalid!(similar(data, _decoded(mask)), data, mask, 1), name, parentdataset, metadata, nothing)
     return CDFVariable(data, name, parentdataset, metadata, mask)
 end
 
 # Fields are read with `getfield`: CommonDataModel's `getproperty` (for `.attrib` and `.dim`) is not
 # always constant-folded, and then boxes `var` on every access.
 Base.parent(var::CDFVariable) = getfield(var, :data)
-# Methods on `CDFVariable{T, N, <:Array}` and on other storage types intersect at this uninhabited type,
-# where `getfield` would be a JET error.
-Base.parent(var::CDFVariable{T, N, Union{}}) where {T, N} = throw(MethodError(parent, (var,)))
 _mask(var::CDFVariable) = getfield(var, :mask)
 Base.size(var::CDFVariable) = size(parent(var))
 
@@ -66,14 +60,14 @@ function Base.view(var::CDFVariable, I...)
     m = _mask(var)
     if _hascomponents(m)
         # Linear indexing mixes components; decode first.
-        length(I) == 1 && ndims(var) > 1 && return view(materialize(var), I...)
+        length(I) == 1 && ndims(var) > 1 && return view(Array(var), I...)
         m = m[first(to_indices(var, I))]
     end
     return rebuild(var, view(parent(var), I...), m)
 end
 
 Base.reshape(var::CDFVariable, dims::Dims) =
-    _hascomponents(_mask(var)) ? reshape(materialize(var), dims) : rebuild(var, reshape(parent(var), dims))
+    _hascomponents(_mask(var)) ? reshape(Array(var), dims) : rebuild(var, reshape(parent(var), dims))
 
 function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
     m = _mask(a)
@@ -114,8 +108,8 @@ CDM.attrib(var::CDFVariable) = getfield(var, :metadata)
 CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var)[name]
 CDM.variable(var::CDFVariable, name::String) = variable(dataset(var), name)
 
-# File variable backing `var`, through storage wrappers; a materialized variable reaches it through
-# the dataset.
+# File variable backing `var`, through storage wrappers; an in-memory one (`depend_time`) reaches it
+# through the dataset.
 function _filevar(var::CDFVariable)
     data = _filevar(parent(var))
     return data isa Array ? _filevar(variable(dataset(var), CDM.name(var))) : data
@@ -154,8 +148,11 @@ end
 const _SubView = Union{SubArray, DiskArrays.SubDiskArray}
 
 function depend(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
-    dvar = depend(rebuild(var, parent(parent(var))), i)
+    whole = rebuild(var, parent(parent(var)))
+    dvar = depend(whole, i)
     isnothing(dvar) && return nothing
+    # A coordinate with other records (e.g. a virtual DEPEND_0 without any) is left whole, not to fit.
+    size(dvar, ndims(dvar)) == size(whole, N) || return dvar
     if eltype(dvar) <: AbstractDateTime || is_record_varying(dvar)
         indices = parentindices(parent(var))[ndims(var)]
         return selectdim(dvar, ndims(dvar), indices)

@@ -22,34 +22,6 @@ end
 end
 
 
-@testset "CDFDatasets.jl (cross validation with pycdfpp)" begin
-    @static if VERSION >= v"1.11"
-        using PyCDFpp
-        using PyCDFpp: UnixTime
-
-        omni_file = data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
-        ds = CDFDataset(omni_file)
-        ds_py = CDFDataset(omni_file, backend = PyCDFpp)
-        @test ds isa CDFDataset
-
-        @test PyCDFpp.tt2000_to_datetime_py(ds_py.source.py["Epoch"]) == UnixTime.(ds_py["Epoch"])
-        @test Dates.DateTime.(UnixTime.(ds_py["Epoch"])) == Dates.DateTime.(ds["Epoch"])
-        @test all(zip(values(ds.attrib), values(ds_py.attrib))) do (k, v)
-            k == v
-        end
-        @test CDM.dimnames(ds["V"], 1) == CDM.dimnames(ds_py["V"], 1)
-        @test isequal(Array(ds["V"]), Array(ds_py["V"]))
-        @test get(ds_py["V"].metadata, "absent", nothing) === nothing
-
-        @testset "py show" begin
-            io = IOBuffer()
-            show(io, MIME"text/plain"(), ds_py)
-            str = String(take!(io))
-            @test occursin("Support variables: Epoch", str)
-        end
-    end
-end
-
 @testset "CDFDataset (Edge cases)" begin
     tha_state_url = "https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/download/v0.1.8/tha_l1_state_20100225_v03.cdf"
     ds = cdfopen(download_test_data(tha_state_url))
@@ -79,10 +51,7 @@ end
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
     @test CDM.dimnames(var) == CDM.dimnames(var1)
-    m = materialize(var)
-    @test CDM.dimnames(m) == CDM.dimnames(var1)
-    @test is_record_varying(m)
-    @test SDM.times(m) == vcat(SDM.times(var1), SDM.times(var2))
+    @test SDM.times(SDM.DataVariable(var)) == vcat(SDM.times(var1), SDM.times(var2))
 
     # files with zero records chunk as RegularChunks(1, 0, 0)
     empty = CDFVariable(EmptyDiskVector(), "e", nothing, Dict())
@@ -217,7 +186,6 @@ end
         S = Array(var)
         @test all(isnan.(S) .== (isnan.(A) .| (A .> only(var.attrib["VALIDMAX"]))))
         @test isequal(var[2:3, :, 5:6], S[2:3, :, 5:6])
-        @test isequal(materialize(var).data, S)
 
         # Int8 with Int16 FILLVAL; no fill values in this file, but sector numbers fall
         # outside VALIDMIN/VALIDMAX = [0, 32]
@@ -284,7 +252,6 @@ end
     t = SDM.times(var)
     @test SDM.tdimnum(var) == 3
     @test t == Array(ds["elb_pef_hs_time"])
-    @test SDM.tdimnum(materialize(var)) == 3
     @test isnothing(SDM.tdimnum(cdfopen(data_path("po_h1_tim_00000000_v01.cdf"))["Quality"]))
 
     # time-varying DEPEND_1 kept whole; non-record-varying DEPEND_2 drops its record dimension
@@ -304,6 +271,35 @@ end
 
     @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
     @test !SDM.hastimedim(ds["elb_pef_hs_time"])
+
+    dv = SDM.DataVariable(var)
+    # rebuilds that drop or replace the time axis keep the other coordinates
+    for r in (SDM.rebuild(var, zeros(10, 16), (Val(1), Val(2))), SDM.rebuild(var, zeros(10, 16, 2), 3, t[1:2]))
+        @test SDM.unwrap(SDM.dims(r, 2)) == energies
+    end
+    @test SDM.times(SDM.rebuild(var, zeros(10, 16, 2), 3, t[1:2])) == t[1:2]
+    @test SDM.getmeta(SDM.dims(dv[:, 3:4, :], 2), "UNITS") == "keV"
+
+    # LABL_PTR_1 of a dimension with a DEPEND_1 is a coordinate, which follows slicing
+    vc = cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_Vc"]
+    @test SDM.ISTPSchema()(SDM.DataVariable(vc)[2:3, :], :labels) == ["Ion Vy GSE", "Ion Vz GSE"]  # the labels LABL_PTR_1 names
+    flux = SDM.DataVariable(cdfopen(data_path("labl_ptr.cdf"))["flux"])  # record-varying DEPEND_1
+    @test SDM.dims(flux[2:3, 2:2], 1) == [4.0; 5.0;;]
+    @test SDM.ISTPSchema()(flux[2:3, :], :labels) == ["By", "Bz"]
+    se = cdfopen(data_path("labl_ptr.cdf"))["self_epoch"]
+    @test SDM.times(SDM.DataVariable(se)) == Array(se)
+end
+
+@testset "LABL_PTR labels" begin
+    labels(x) = SDM.ISTPSchema()(x, :labels)
+    ds = cdfopen(data_path("labl_ptr.cdf"))
+    @test labels(ds["ok"]) == ["Bx", "By", "Bz"]
+    @test SDM.dims(ds["ok"], 1) === Base.OneTo(3)  # labels are not values
+    @test labels(SDM.DataVariable(ds["ok"])[2:3, :]) == ["By", "Bz"]
+    @test isnothing(labels(ds["dangling"]))
+    @test labels(DimArray(ds["ok"])[X = 2:3]) == ["By", "Bz"]
+    @test labels(cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_V"]) ==
+        ["Ion Bulk Speed", "Ion Bulk Polar Angle", "Ion Bulk Azimuth Angle"]
 end
 
 @testset "CDFDataset" begin
@@ -313,54 +309,10 @@ end
     @test ds isa CDFDataset
 end
 
-@testset "Materialized CDFVariable array operations" begin
-    ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
-    disk_var = ds["V"]
-    var = materialize(disk_var)
-    data = parent(var)
-
-    @test data isa Array
-
-    @test cdf_type(var) == cdf_type(disk_var)
-    @test disk_var .* 2 isa DiskArrays.BroadcastDiskArray
-    @test CDM.dimnames(var) == CDM.dimnames(disk_var)
-    @test CDM.dimnames(var, 1) == CDM.dimnames(disk_var, 1)
-    @test var[1] == data[1]
-    @test sum(var) == sum(data)
-    @test maximum(var) == maximum(data)
-    @test copy(var) == data
-    @test convert(Vector, var) == data  # copyto! must not bounce between DiskArrays and broadcast
-    @test var .* 2 == data .* 2
-    @test var .* 2 isa Array
-
-    @testset "Zero-overhead forwarding" begin
-        time_ratio(pair) = pair[1].time / pair[2].time
-        @test (@b sum($var)).bytes == 0
-        @test (@b maximum($var)).bytes == 0
-        # Broadcast reads elementwise through the wrapper instead of its parent.
-        @test_broken time_ratio(@b ($var .* 2, $data .* 2)) < 1.2
-    end
-end
-
-@testset "CDFVariable array operation performance" begin
-    ds = CDFDataset(data_path("elb_l2_epdef_20210914_v01.cdf"))
-    disk_var = ds["elb_pef_hs_Epat_eflux"]
-    mem_var = materialize(disk_var)
-
-    disk_sum = @b(sum($disk_var))
-    mem_sum = @b(sum($mem_var))
-    @test mem_sum.time < disk_sum.time
-    @test mem_sum.bytes < disk_sum.bytes
-    @test mem_sum.bytes == 0
-
-    disk_maximum = @b(maximum($disk_var))
-    mem_maximum = @b(maximum($mem_var))
-    @test mem_maximum.time < disk_maximum.time
-    @test mem_maximum.bytes < disk_maximum.bytes
-    @test mem_maximum.bytes == 0
-    disk_broadcast = @b(Array($disk_var .* 2))
-    mem_broadcast = @b($mem_var .* 2)
-    @test mem_broadcast.bytes < disk_broadcast.bytes
+@testset "Array operations" begin
+    var = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))["V"]
+    @test var .* 2 isa DiskArrays.BroadcastDiskArray
+    @test convert(Vector, var) == Array(var)  # copyto! must not bounce between DiskArrays and broadcast
 end
 
 include("test_show.jl")

@@ -27,35 +27,15 @@ function _checks(checks::NamedTuple)
     return checks
 end
 
-# https://github.com/SciQLop/CDFpp/blob/main/pycdfpp/__init__.py
-
 """
-    CDFDataset(file; backend = :julia, checks = (;))
+    CDFDataset(file; checks = (;))
 
 Load the CDF dataset at the `file` path. The dataset supports the API of the
 [JuliaGeo/CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl).
 
-`backend` controls the backend used to load the CDF dataset. Two options are
-available: `:julia` and `:PyCDFpp`. The default is `:julia`.
-
-For `PyCDFpp` backend, we use `lazy_load = true` by default. 
-If `lazy_load = false`, all variable values are immediately loaded.
-
 Global attributes are entry vectors.
 """
-function CDFDataset(file::AbstractString; backend = :julia, checks = (;), kw...)
-    backend = Symbol(backend)
-    @assert backend in (:julia, :PyCDFpp, :CommonDataFormat)
-    return if backend == :PyCDFpp
-        CDFDataset(PyCDFppDataset(file; lazy_load = false, kw...); checks)
-    else
-        CDFDataset(CDF.CDFDataset(file); checks)
-    end
-end
-
-function PyCDFppDataset(file; kwargs...)
-    error("PyCDFppDataset requires the PyCDFpp extension. Please load PyCDFpp first.")
-end
+CDFDataset(file::AbstractString; checks = (;)) = CDFDataset(CDF.CDFDataset(file); checks)
 
 # Base interface
 Base.parent(ds::CDFDataset) = ds.source
@@ -76,7 +56,7 @@ _unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks)
     variable(ds, name; metadata, fillval, validmin, validmax) :: CDFVariable
 
 Variable `name` of `ds`, also `ds[name]`. The keywords override the dataset's `checks` and the
-attributes (README: Missing values). A materialized variable stores decoded data.
+attributes (README: Missing values).
 """
 function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)
@@ -101,11 +81,7 @@ CDM.attrib(ds::AbstractCDFDataset, name::SymbolString) = CDM.attrib(_source1(ds)
 CDM.path(ds::CDFDataset) = _is_multi_source(ds) ? CDM.path.(parent(ds)) : CDM.path(parent(ds))
 CDM.name(ds::AbstractCDFDataset) = join(get(ds.attrib, "Logical_source", '/'), '/')
 
-function CDFDataset(sources::AbstractVector{<:AbstractString}; backend = :julia, checks = (;))
-    backend = Symbol(backend)
-    @assert backend in (:julia, :CommonDataFormat)
-    return CDFDataset(CDF.CDFDataset.(sources); checks)
-end
+CDFDataset(sources::AbstractVector{<:AbstractString}; checks = (;)) = CDFDataset(CDF.CDFDataset.(sources); checks)
 
 function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     ds1 = _source1(ds)

@@ -1,7 +1,7 @@
 module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
-using CDFDatasets: CDFVariable, AbstractCDFVariable, materialize
+using CDFDatasets: AbstractCDFVariable, SDM
 import CommonDataModel as CDM
 using DimensionalData
 import DimensionalData: DimArray
@@ -10,16 +10,16 @@ dimtype(::Val{1}) = X
 dimtype(::Val{2}) = Y
 dimtype(::Val{3}) = Z
 
-# multi-dimensional DEPENDs cannot label a single axis; fall back to positional
+# A lookup is a vector: multi-dimensional coordinates fall back to positional. Labels are the lookup of a
+# dimension without a `DEPEND`, and dropped from one with it.
 function format_dim(data, i)
     DT = i == ndims(data) ? Ti : dimtype(Val(i))
-    dimvar = depend(data, i)
-    if !isnothing(dimvar) && length(dimvar) == size(data, i)
-        mat = materialize(dimvar)
-        return DT(vec(mat.data); metadata = mat.metadata)
-    end
-    return DT(axes(data, i))
+    c = SDM.dims(data, i)
+    c isa AbstractCDFVariable || return DT(@something _labelkeys(data, i) c)
+    ndims(c) == 1 || return DT(axes(data, i))
+    return DT(vec(Array(c)); metadata = CDM.attrib(c))
 end
+_labelkeys(data, i) = (l = CDFDatasets._labels(data, i); isnothing(l) ? nothing : parent(l))
 
 DimensionalData.dims(v::AbstractCDFVariable) = ntuple(i -> format_dim(v, i), ndims(v))
 

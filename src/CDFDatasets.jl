@@ -5,7 +5,7 @@ using CommonDataModel: AbstractDataset, AbstractVariable
 import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, dataset
 import CommonDataModel as CDM
 using CommonDataFormat
-using CommonDataFormat: TT2000, Epoch, Epoch16, fillvalue
+using CommonDataFormat: TT2000, Epoch, Epoch16
 using Dates: AbstractDateTime, DateTime, Nanosecond
 using Durations: Durations, Timestamp
 import CommonDataFormat as CDF
@@ -24,7 +24,6 @@ export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
 export dim, depend
 export is_record_varying
-export fillvalue, materialize
 export ..
 export variable
 
@@ -33,7 +32,6 @@ abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
 
 include("dataset.jl")
 include("variable.jl")
-include("materialize.jl")
 include("istp.jl")
 include("concat.jl")
 include("subvariable.jl")

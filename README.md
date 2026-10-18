@@ -20,7 +20,7 @@ bx = ds["BR"]
 
 ## Missing values
 
-Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component along dimension 1), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
+Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
 
 ```julia
 var = ds["BR"]                                                      # lazy: nothing read yet
@@ -30,13 +30,17 @@ variable(ds, "BR"; validmax = nothing)                              # one variab
 cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
 ```
 
+## Time series
+
+`CDFVariable`s implement the [SpaceDataModel](https://github.com/JuliaSpacePhysics/SpaceDataModel.jl) / [TimeseriesUtilities](https://github.com/JuliaSpacePhysics/TimeseriesUtilities.jl) container interface: `times(var)`, `dims(var, i)` (the `DEPEND_i` coordinate, a lazy `CDFVariable` with its attributes), and operations such as `tmean(var, Minute(5)) :: DataVariable`.
+
+- `DataVariable(var)` reads it into memory whose indexing keeps the time dimension, sliced coordinates and attributes; `DataVariable(view(var, :, 1:10))` reads part.
+- `LABL_PTR_i` labels, trailing space padding stripped, are a further coordinate along dimension `i` (`SpaceDataModel.coords`); `var.attrib["LABL_PTR_i"]` is the stored name of the labels variable. `DimArray(var)` takes labels as the lookup of a dimension without `DEPEND_i`.
+
 ## Features
 
 It provides a high-level interface with features:
 
 - Concatenation of multiple CDF files;
-- Multi-backend support ([`CommonDataFormat.jl`](https://github.com/JuliaSpacePhysics/CommonDataFormat.jl) and [`CDFpp` (C++)](https://github.com/SciQLop/CDFpp));
 - Integration with [`DimensionalData.jl`](https://github.com/rafaqz/DimensionalData.jl).
-
-It is recommended to use the native Julia implementation `CommonDataFormat.jl` for reading CDF files. `CDFpp` backend is mainly used for cross-validation, available in the `PyCDFpp` directory.
 
