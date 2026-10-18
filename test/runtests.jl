@@ -90,6 +90,11 @@ end
     padded = cat(empty, var1, empty; dims = 1)
     @test size(padded) == size(var1)
     @test isequal(padded[:], var1[:])
+
+    # views read through the parts, across their boundary
+    e = CDFDataset(data_path("elb_l2_epdef_20210914_v01.cdf"))["elb_pef_hs_Epat_eflux"]
+    e2 = cat(e, e; dims = 3)
+    @test isequal(Array(view(e2, 2, :, 40:50)), Array(e2)[2, :, 40:50])
 end
 
 @testset "Multi-file CDFDataset" begin
