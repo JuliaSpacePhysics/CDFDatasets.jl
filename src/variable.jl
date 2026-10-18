@@ -95,6 +95,13 @@ function _readmasked!(data, aout, m, inds)
 end
 
 _readraw!(d::AbstractDiskArray, aout, inds...) = (DiskArrays.readblock!(d, aout, inds...); aout)
+# Through the parent's own `_readraw!` (e.g. the concatenation fast path)
+function _readraw!(d::DiskArrays.SubDiskArray, aout, inds::Vararg{Any, N}) where {N}  # `N` specialize
+    pinds = Base.reindex(parentindices(d), inds)
+    all(i -> i isa Union{Integer, AbstractUnitRange}, pinds) || return (DiskArrays.readblock!(d, aout, inds...); aout)
+    _readraw!(parent(d), reshape(aout, map(length, pinds)), map(i -> i isa Integer ? (i:i) : i, pinds)...)
+    return aout
+end
 _readraw!(d, aout, inds...) = copyto!(aout, view(d, inds...))
 
 DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
