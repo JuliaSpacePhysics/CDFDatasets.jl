@@ -1,5 +1,6 @@
 function SDM.tdimnum(var::CDFVariable)
     N = ndims(var)
+    _isrecorddim(var, N) || return nothing
     dname = dimvarname(var, N)
     (isnothing(dname) || !is_record_varying(var)) && return nothing
     dname == dimnames(var, N) || return N  # swapped in DEPEND_TIME
@@ -9,28 +10,34 @@ end
 """
     SpaceDataModel.dims(var::CDFVariable, i)
 
-Coordinate of dimension `i`: its `DEPEND`, lazily, else `axes(var, i)` (also when the `DEPEND`
-does not fit). A non-record-varying coordinate loses its length-1 record
-dimension; a record-varying one keeps its records, sliced like `var`.
+Coordinate of dimension `i`: its `DEPEND`, lazily and sliced like `var`, else `axes(var, i)` (also when
+the `DEPEND` does not fit). A non-record-varying coordinate loses its length-1 record
+dimension; a record-varying one keeps its records.
 """
 SDM.dims(var::CDFVariable, i::Integer) = @something _depend(var, i) axes(var, i)
 
 # A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
 function _depend(var::CDFVariable, i::Integer)
     c = depend(var, i)
-    (isnothing(c) || CDM.name(c) == get(CDM.attrib(var), "LABL_PTR_$i", nothing)) && return nothing
-    i == ndims(var) || is_record_varying(c) || (c = _droprecord(c))
+    (isnothing(c) || CDM.name(c) == get(CDM.attrib(var), "LABL_PTR_$(_storeddim(var, i))", nothing)) && return nothing
+    _isrecorddim(var, i) || is_record_varying(c) || (c = _droprecord(c))
     return _fits(c, var, i) ? c : nothing
 end
 
 # Labels of the variable `LABL_PTR_i` names, when they fit dimension `i`, under its name so the pointer
 # finds them. Dangling pointers exist in the wild (e.g. IM_K0_EUV); ISTP writers pad labels with spaces to the CHAR width.
 function _labels(var::CDFVariable, i::Integer)
-    p = get(CDM.attrib(var), "LABL_PTR_$i", nothing)
+    s = _storeddim(var, i)
+    p = get(CDM.attrib(var), "LABL_PTR_$s", nothing)
     source = _source1(dataset(var))
     p isa AbstractString && haskey(source, p) || return nothing
     lv = source[p]
     l = vec(Array(lv))  # `Array` skips DiskArrays indexing
+    inds = _viewindices(var)
+    if !isnothing(inds)
+        length(l) == size(parent(parent(var)), s) || return nothing
+        l = l[inds[s]]
+    end
     eltype(l) <: AbstractString && length(l) == size(var, i) || return nothing
     return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = CDM.attrib(lv), name = p)
 end

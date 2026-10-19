@@ -269,6 +269,17 @@ end
     @test SDM.times(sub) == t[idx]
     @test SDM.unwrap(SDM.dims(sub, 1)) == SDM.unwrap(SDM.dims(var, 1))[:, idx]
 
+    # integer indices drop dimensions, so view dimension i maps to a later stored DEPEND_i/LABL_PTR_i; coordinates are sliced like the data
+    v = view(var, 2:3, 5, 1:10)
+    @test SDM.tdimnum(v) == 2 && SDM.times(v) == t[1:10]
+    @test SDM.unwrap(SDM.dims(v, 1)) == SDM.unwrap(SDM.dims(var, 1))[2:3, 1:10]
+    v = view(var, :, 3:4, 7)
+    @test isnothing(SDM.tdimnum(v))
+    @test SDM.unwrap(SDM.dims(v, 1)) == SDM.unwrap(SDM.dims(var, 1))[:, 7]
+    @test SDM.unwrap(SDM.dims(v, 2)) == energies[3:4]
+    nflux = ds["elb_pef_Et_nflux"]
+    @test SDM.times(SDM.DataVariable(view(nflux, 4, :))) == SDM.times(nflux)
+
     @test !SDM.hastimedim(ds["elb_pef_energies_mean"])  # non-record-varying
     @test !SDM.hastimedim(ds["elb_pef_hs_time"])
 
@@ -296,6 +307,8 @@ end
     @test labels(ds["ok"]) == ["Bx", "By", "Bz"]
     @test SDM.dims(ds["ok"], 1) === Base.OneTo(3)  # labels are not values
     @test labels(SDM.DataVariable(ds["ok"])[2:3, :]) == ["By", "Bz"]
+    @test labels(view(ds["ok"], 2:3, :)) == ["By", "Bz"]
+    @test labels(view(ds["ok"], :, 2)) == ["Bx", "By", "Bz"]
     @test isnothing(labels(ds["dangling"]))
     @test labels(DimArray(ds["ok"])[X = 2:3]) == ["By", "Bz"]
     @test labels(cdfopen(data_path("ge_h0_cpi_00000000_v01.cdf"))["SW_V"]) ==
