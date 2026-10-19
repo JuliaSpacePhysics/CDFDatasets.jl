@@ -118,7 +118,7 @@ _filevar(data) = data
 _filevar(data::DiskArrays.ConcatDiskArray) = _filevar(first(data.parents))
 _filevar(data::Union{SubArray, DiskArrays.SubDiskArray}) = _filevar(parent(data))
 
-CDM.dimnames(var::CDFVariable, i::Int) = dimnames(_filevar(var), i)
+CDM.dimnames(var::CDFVariable, i::Int) = dimnames(_filevar(var), _storeddim(var, i))
 
 CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
 
@@ -129,7 +129,7 @@ function dimvarname(var::CDFVariable, i::Int)
     dname = dimnames(var, i)
     # Some CDAWeb masters name a DEPEND missing from the file (`po_h1_tim` `Start_epoch`).
     (isnothing(dname) || !haskey(dataset(var), dname)) && return nothing
-    swap = i == ndims(var) && "DEPEND_TIME" in attribnames(var) && is_virtual(dataset(var)[dname])
+    swap = _isrecorddim(var, i) && "DEPEND_TIME" in attribnames(var) && is_virtual(dataset(var)[dname])
     return swap ? attrib(var, "DEPEND_TIME") : dname
 end
 
@@ -147,17 +147,38 @@ end
 
 const _SubView = Union{SubArray, DiskArrays.SubDiskArray}
 
+# Indices of a view into the stored variable (DiskArrays and Base flatten nested views), whose integer
+# indices drop dimensions: attributes such as `DEPEND_i` number the stored dimensions.
+_viewindices(var::CDFVariable) = _viewindices(parent(var))
+_viewindices(data::_SubView) = parentindices(data)
+_viewindices(data) = nothing
+
+function _storeddim(var::CDFVariable, i)
+    inds = _viewindices(var)
+    isnothing(inds) && return i
+    return findall(map(x -> !(x isa Integer), inds))[i]
+end
+
+# The record dimension is the last stored one.
+function _isrecorddim(var::CDFVariable, i)
+    inds = _viewindices(var)
+    return _storeddim(var, i) == (isnothing(inds) ? ndims(var) : length(inds))
+end
+
+# The coordinate of the stored variable, sliced like `var`: along its values (first) and records (last).
 function depend(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
     whole = rebuild(var, parent(parent(var)))
-    dvar = depend(whole, i)
+    inds, s, R = _viewindices(var), _storeddim(var, i), ndims(whole)
+    dvar = depend(whole, s)
     isnothing(dvar) && return nothing
     # A coordinate with other records (e.g. a virtual DEPEND_0 without any) is left whole, not to fit.
-    size(dvar, ndims(dvar)) == size(whole, N) || return dvar
-    if eltype(dvar) <: AbstractDateTime || is_record_varying(dvar)
-        indices = parentindices(parent(var))[ndims(var)]
-        return selectdim(dvar, ndims(dvar), indices)
+    records = size(dvar, ndims(dvar)) == size(whole, R) && (eltype(dvar) <: AbstractDateTime || is_record_varying(dvar))
+    s == R && return records ? view(dvar, inds[R]) : dvar
+    size(dvar, 1) == size(whole, s) || return dvar
+    if records && ndims(dvar) > 1
+        return view(dvar, inds[s], ntuple(_ -> :, ndims(dvar) - 2)..., inds[R])
     end
-    return dvar
+    return view(dvar, inds[s], ntuple(_ -> :, ndims(dvar) - 1)...)
 end
 
 CDM.dim(var::CDFVariable, i::Int) = @something depend(var, i) axes(parent(var), i)
