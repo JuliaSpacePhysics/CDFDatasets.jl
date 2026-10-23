@@ -10,14 +10,12 @@ end
 """
     SpaceDataModel.dims(var::CDFVariable, i)
 
-Coordinate of dimension `i`: its `DEPEND`, lazily and sliced like `var`, else `axes(var, i)` (also when
+Coordinate of dimension `i`: its `DEPEND`, lazily and sliced like `var`, else `nothing` (also when
 the `DEPEND` does not fit). A non-record-varying coordinate loses its length-1 record
 dimension; a record-varying one keeps its records.
 """
-SDM.dims(var::CDFVariable, i::Integer) = @something _depend(var, i) axes(var, i)
-
-# A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
-function _depend(var::CDFVariable, i::Integer)
+function SDM.dims(var::CDFVariable, i::Integer)
+    # A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
     c = depend(var, i)
     (isnothing(c) || CDM.name(c) == get(CDM.attrib(var), "LABL_PTR_$(_storeddim(var, i))", nothing)) && return nothing
     _isrecorddim(var, i) || is_record_varying(c) || (c = _droprecord(c))
@@ -49,8 +47,9 @@ SDM.DataVariable(var::CDFVariable) = _datavariable(var, Array(var))
 
 function _datavariable(var::CDFVariable, data; read = Returns(true))
     t = SDM.tdimnum(var)
-    coord(i) = read(i) ? _coordvar(SDM.dims(var, i)) : axes(var, i)
-    return SDM.DataVariable(data; time = isnothing(t) ? nothing : t => coord(t),
+    coord(i) = read(i) ? _coordvar(SDM.dims(var, i)) : nothing
+    # unread times are a placeholder for those `rebuild` gives
+    return SDM.DataVariable(data; time = isnothing(t) ? nothing : t => (read(t) ? coord(t) : axes(var, t)),
         dims = [i => coord(i) for i in 1:ndims(var) if i != t],
         coords = [axs => _coordvar(c) for (axs, c) in SDM.coords(var)], metadata = CDM.attrib(var), name = CDM.name(var))
 end

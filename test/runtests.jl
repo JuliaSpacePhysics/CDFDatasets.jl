@@ -16,9 +16,12 @@ include("utils.jl")
     Aqua.test_all(CDFDatasets)
 end
 
-@testset "JET static analysis" begin
-    using JET
-    JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
+# JET refuses to analyze on Julia prereleases
+if isempty(VERSION.prerelease)
+    @testset "JET static analysis" begin
+        using JET
+        JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
+    end
 end
 
 
@@ -261,7 +264,8 @@ end
     @test SDM.getmeta(energies, "UNITS") == "keV"
     @test SDM.ISTPSchema()(ds["elb_pef_Et_eflux"])[:depend_1_unit] == "keV"
     # DEPEND_1 lists 16 energies for 10 pitch-angle bins
-    @test SDM.dims(ds["elb_pef_hs_epa_spec"], 1) == 1:10
+    @test isnothing(SDM.dims(ds["elb_pef_hs_epa_spec"], 1))
+    @test lookup(DimArray(ds["elb_pef_hs_epa_spec"]), 1) isa DimensionalData.NoLookup
 
     t0, t1 = DateTime("2021-09-14T16:23:44.432"), DateTime("2021-09-14T16:27:35.676")
     sub = var[t0 .. t1]
@@ -305,7 +309,7 @@ end
     labels(x) = SDM.ISTPSchema()(x, :labels)
     ds = cdfopen(data_path("labl_ptr.cdf"))
     @test labels(ds["ok"]) == ["Bx", "By", "Bz"]
-    @test SDM.dims(ds["ok"], 1) === Base.OneTo(3)  # labels are not values
+    @test isnothing(SDM.dims(ds["ok"], 1))  # labels are not values
     @test labels(SDM.DataVariable(ds["ok"])[2:3, :]) == ["By", "Bz"]
     @test labels(view(ds["ok"], 2:3, :)) == ["By", "Bz"]
     @test labels(view(ds["ok"], :, 2)) == ["Bx", "By", "Bz"]
