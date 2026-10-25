@@ -108,13 +108,10 @@ CDM.attrib(var::CDFVariable) = getfield(var, :metadata)
 CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var)[name]
 CDM.variable(var::CDFVariable, name::String) = variable(dataset(var), name)
 
-# File variable backing `var`, through storage wrappers; an in-memory one (`depend_time`) reaches it
-# through the dataset.
-function _filevar(var::CDFVariable)
-    data = _filevar(parent(var))
-    return data isa Array ? _filevar(variable(dataset(var), CDM.name(var))) : data
-end
+# File variable backing `var`, through storage wrappers.
+_filevar(var::CDFVariable) = _filevar(parent(var))
 _filevar(data) = data
+_filevar(data::DiskArrays.BroadcastDiskArray) = _filevar(only(data.broadcasted.args))
 _filevar(data::DiskArrays.ConcatDiskArray) = _filevar(first(data.parents))
 _filevar(data::Union{SubArray, DiskArrays.SubDiskArray}) = _filevar(parent(data))
 
@@ -191,7 +188,7 @@ CDF.is_record_varying(var::CDFVariable) = is_record_varying(_filevar(var))
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
     dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return CDFVariable(unix2timestamp.(Array(parent(dimvar))), CDM.name(dimvar), dataset(dimvar), CDM.attrib(dimvar))
+    return CDFVariable(unix2timestamp.(parent(dimvar)), CDM.name(dimvar), dataset(dimvar), CDM.attrib(dimvar))
 end
 
 # Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values
