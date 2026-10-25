@@ -115,7 +115,10 @@ _filevar(data::DiskArrays.BroadcastDiskArray) = _filevar(only(data.broadcasted.a
 _filevar(data::DiskArrays.ConcatDiskArray) = _filevar(first(data.parents))
 _filevar(data::Union{SubArray, DiskArrays.SubDiskArray}) = _filevar(parent(data))
 
-CDM.dimnames(var::CDFVariable, i::Int) = dimnames(_filevar(var), _storeddim(var, i))
+function CDM.dimnames(var::CDFVariable, i::Int)
+    d = get(CDM.attrib(var), _isrecorddim(var, i) ? "DEPEND_0" : "DEPEND_$(_storeddim(var, i))", nothing)
+    return d isa AbstractString ? String(d) : nothing
+end
 
 CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
 

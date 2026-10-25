@@ -320,6 +320,12 @@ end
         ["Ion Bulk Speed", "Ion Bulk Polar Angle", "Ion Bulk Azimuth Angle"]
 end
 
+@testset "DEPEND from metadata" begin
+    ds = cdfopen(data_path("labl_ptr.cdf"))
+    @test CDM.dimnames(CDM.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "labels")), 1) == "labels"
+    @test isnothing(SDM.dims(CDM.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "flux_energy")), 1))
+end
+
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")
     ds = CDFDataset(test_file)
