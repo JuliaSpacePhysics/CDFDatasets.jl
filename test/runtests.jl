@@ -345,6 +345,13 @@ end
     @test cdfopen(ge; master).attrib["Logical_source"] == cdfopen(ge).attrib["Logical_source"] != ["labl_ptr"]
 end
 
+@testset "Fewer records than the time coordinate" begin
+    ds = cdfopen(data_path("labl_ptr.cdf"), DateTime(2020), DateTime(2021))
+    @test size(ds["unwritten"]) == (0,)
+    @test size(ds["unwritten_epoch"]) == (0,)
+    @test size(ds["unwritten_swapped"]) == (0,)
+end
+
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")
     ds = CDFDataset(test_file)
