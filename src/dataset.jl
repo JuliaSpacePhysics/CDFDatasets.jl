@@ -86,10 +86,17 @@ function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw
     # `nothing` for a coordinate not of times, which leaves the variable whole
     indices = get!(ds.indices, key) do
         tdim = is_epoch ? var : depend(var, N)
-        eltype(tdim) <: AbstractDateTime ? find_indices(convert(Vector, tdim), ds.interval) : nothing
+        eltype(tdim) <: AbstractDateTime ? find_indices(tdim, ds.interval) : nothing
     end
     isnothing(indices) && return var
-    return selectdim(var, N, indices)
+    return _selectrecords(var, indices)
+end
+
+# Records align by number within a file, so a variable with fewer than its time coordinate keeps those it has
+function _selectrecords(var, indices)
+    N = ndims(var)
+    n = size(var, N)
+    return selectdim(var, N, isempty(indices) || last(indices) <= n ? indices : filter(<=(n), indices))
 end
 
 function CDM.varnames(ds::CDFDataset)

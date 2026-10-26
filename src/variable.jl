@@ -98,8 +98,9 @@ function _readraw!(d::DiskArrays.SubDiskArray, aout, inds::Vararg{Any, N}) where
 end
 _readraw!(d, aout, inds...) = copyto!(aout, view(d, inds...))
 
+# DiskArrays gives an unchunked broadcast (e.g. a DEPEND_TIME conversion) without elements chunks of size 0, which it rejects (JuliaIO/DiskArrays.jl#348)
 DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
-    DiskArrays.eachchunk(parent(var))
+    isempty(var) ? DiskArrays.GridChunks(size(var), max.(size(var), 1)) : DiskArrays.eachchunk(parent(var))
 
 CDM.name(var::CDFVariable) = getfield(var, :name)
 CDM.dataset(var::CDFVariable) = getfield(var, :parentdataset)

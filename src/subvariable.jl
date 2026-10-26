@@ -10,12 +10,15 @@ function find_indices(tdim::Vector, interval::Interval)
     return i0:i1
 end
 
+# `Array`, as DiskArrays' `convert(Vector, ·)` throws on an unchunked array without elements (JuliaIO/DiskArrays.jl#348)
+find_indices(tdim::AbstractVector, interval::Interval) = find_indices(Array(tdim), interval)
+
 function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
     N = ndims(var)
     T <: AbstractDateTime || !isnothing(SDM.tdimnum(var)) ||
         throw(ArgumentError("Interval indexing requires a time coordinate (a DEPEND_0 of times); none found for $(CDM.name(var)); pass a `master` or `metadata` naming one"))
     tdim = T <: AbstractDateTime ? var : depend(var, N)
-    return selectdim(var, N, find_indices(convert(Vector, tdim), interval))
+    return selectdim(var, N, find_indices(tdim, interval))
 end
 
 Base.getindex(var::CDFVariable, interval::Interval) = _getindex_interval(var, interval)
