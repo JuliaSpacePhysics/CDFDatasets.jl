@@ -16,6 +16,7 @@ using CDFDatasets
 ds = cdfopen("data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
 times = ds["Epoch"]
 bx = ds["BR"]
+ds = cdfopen(files, t0, t1)  # files concatenated along records; record-varying variables restricted to [t0, t1)
 ```
 
 ## Missing values
@@ -28,6 +29,7 @@ Array(var)                                                          # reads and 
 parent(var)                                                         # stored on-disk data, undecoded
 variable(ds, "BR"; validmax = nothing)                              # one variable: override `fillval`/`validmin`/`validmax`; `nothing` disables
 cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
+cdfopen(file; master = path)                                        # master CDF's variable attributes and non-record-varying variables override the file's; its global attributes fill the file's gaps
 ```
 
 ## Time series

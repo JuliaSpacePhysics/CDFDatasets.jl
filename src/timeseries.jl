@@ -4,7 +4,7 @@ function SDM.tdimnum(var::CDFVariable)
     dname = dimvarname(var, N)
     (isnothing(dname) || !is_record_varying(var)) && return nothing
     dname == dimnames(var, N) || return N  # swapped in DEPEND_TIME
-    return eltype(_source1(dataset(var))[dname]) <: AbstractDateTime ? N : nothing
+    return eltype(_source(dataset(var), dname)[dname]) <: AbstractDateTime ? N : nothing
 end
 
 """
@@ -27,8 +27,9 @@ end
 function _labels(var::CDFVariable, i::Integer)
     s = _storeddim(var, i)
     p = get(CDM.attrib(var), "LABL_PTR_$s", nothing)
-    source = _source1(dataset(var))
-    p isa AbstractString && haskey(source, p) || return nothing
+    p isa AbstractString || return nothing
+    source = _source(dataset(var), String(p))
+    isnothing(source) && return nothing
     lv = source[p]
     l = vec(Array(lv))  # `Array` skips DiskArrays indexing
     inds = _viewindices(var)
