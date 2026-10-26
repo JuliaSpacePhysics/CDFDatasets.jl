@@ -67,6 +67,9 @@ function _show(io::IO, ds::AbstractCDFDataset)
     if ds isa CDFDataset && !isempty(ds.checks)
         print(io, indent, "Checks: ", ds.checks, "\n")
     end
+    if ds isa CDFDataset && !isnothing(ds.master)
+        print(io, indent, "Master: ", CDM.path(ds.master), "\n")
+    end
 
     printstyled(io, indent, "Dataset: ", CDM.path(ds), "\n", color = CDM.section_color[])
 

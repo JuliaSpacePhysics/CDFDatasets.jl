@@ -326,6 +326,22 @@ end
     @test isnothing(SDM.dims(CDM.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "flux_energy")), 1))
 end
 
+@testset "Attributes from a master" begin
+    file, master = data_path("labl_ptr.cdf"), data_path("labl_ptr_master.cdf")
+    t0, t1 = DateTime(2020, 1, 1, 0, 1), DateTime(2020, 1, 2)
+    # `ok` has no DEPEND_0 nor FILLVAL, as in Wind 3DP files whose masters alone carry them
+    ok = cdfopen(file, t0, t1; master)["ok"]
+    @test size(ok) == (3, 1)
+    @test all(isnan, Array(ok))
+
+    @test Array(SDM.dims(cdfopen(file; master)["flux"], 1)) == [10, 20, 30]
+    @test SDM.ISTPSchema()(cdfopen(file; master)["ok"], :labels) == ["Ex", "Ey", "Ez"]
+    @test "energy_vals" in keys(cdfopen(file; master))
+    @test cdfopen(file; master).attrib["Logical_source"] == ["labl_ptr"]
+    ge = data_path("ge_h0_cpi_00000000_v01.cdf")
+    @test cdfopen(ge; master).attrib["Logical_source"] == cdfopen(ge).attrib["Logical_source"] != ["labl_ptr"]
+end
+
 @testset "CDFDataset" begin
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")
     ds = CDFDataset(test_file)
