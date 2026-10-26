@@ -330,6 +330,9 @@ end
     file, master = data_path("labl_ptr.cdf"), data_path("labl_ptr_master.cdf")
     t0, t1 = DateTime(2020, 1, 1, 0, 1), DateTime(2020, 1, 2)
     # `ok` has no DEPEND_0 nor FILLVAL, as in Wind 3DP files whose masters alone carry them
+    @test size(cdfopen(file, t0, t1)["ok"]) == (3, 2)
+    @test_throws ArgumentError cdfopen(file)["ok"][t0 .. t1]
+    # nor with a DEPEND_0 of other than times (ICON's `Epoch` holds integer milliseconds)
     ok = cdfopen(file, t0, t1; master)["ok"]
     @test size(ok) == (3, 1)
     @test all(isnan, Array(ok))
