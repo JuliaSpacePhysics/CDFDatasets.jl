@@ -31,6 +31,7 @@ end
     var = ds["tha_pos"]
     tdim = CDM.dim(var, 2)
     @test tdim isa CDFVariable
+    @test parent(tdim) isa DiskArrays.AbstractDiskArray  # lazy, like other coordinates
     @test eltype(tdim) <: Dates.AbstractDateTime
     @test CDFDatasets.unix2timestamp(1.267056060123e9) == DateTime(2010, 2, 25, 0, 1, 0, 123)
     # subview keeps the swapped DEPEND_TIME coordinate
