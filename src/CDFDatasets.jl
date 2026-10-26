@@ -42,7 +42,7 @@ include("show.jl")
     cdfopen(file; kw...) :: CDFDataset
     cdfopen(files, [t0, t1]; kw...) :: CDFDataset
 
-Opens CDF file(s) as a `AbstractCDFDataset`, and restricts record-varying variables to `[t0, t1)` when provided.
+Opens CDF file(s) as a `AbstractCDFDataset`, and restricts variables with a time coordinate to `[t0, t1)` when provided.
 """
 cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
 cdfopen(files; kw...) = CDFDataset(collect(String, files); kw...)

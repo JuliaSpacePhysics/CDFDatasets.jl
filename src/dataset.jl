@@ -16,7 +16,7 @@ struct CDFDataset{A, I, D, C <: NamedTuple, M} <: AbstractCDFDataset
 end
 
 function CDFDataset(source, interval = nothing; checks = (;), master = nothing)
-    indices = isnothing(interval) ? nothing : LockedDict{String, Union{UnitRange{Int}, Vector{Int}}}()
+    indices = isnothing(interval) ? nothing : LockedDict{String, Union{UnitRange{Int}, Vector{Int}, Nothing}}()
     return CDFDataset(source, interval, indices, _checks(checks), _master(master))
 end
 
@@ -82,10 +82,13 @@ function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw
     N = ndims(var)
     is_epoch = eltype(var) <: AbstractDateTime
     key = is_epoch ? String(name) : dimvarname(var, N)
+    isnothing(key) && return var
+    # `nothing` for a coordinate not of times, which leaves the variable whole
     indices = get!(ds.indices, key) do
         tdim = is_epoch ? var : depend(var, N)
-        find_indices(convert(Vector, tdim), ds.interval)
+        eltype(tdim) <: AbstractDateTime ? find_indices(convert(Vector, tdim), ds.interval) : nothing
     end
+    isnothing(indices) && return var
     return selectdim(var, N, indices)
 end
 

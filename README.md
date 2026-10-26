@@ -16,7 +16,7 @@ using CDFDatasets
 ds = cdfopen("data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
 times = ds["Epoch"]
 bx = ds["BR"]
-ds = cdfopen(files, t0, t1)  # files concatenated along records; record-varying variables restricted to [t0, t1)
+ds = cdfopen(files, t0, t1)  # files concatenated along records; variables with a time coordinate restricted to [t0, t1)
 ```
 
 ## Missing values
