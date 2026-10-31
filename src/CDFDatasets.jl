@@ -13,7 +13,7 @@ import CommonDataFormat: is_record_varying
 import DiskArrays
 using DiskArrays: AbstractDiskArray
 using PrecompileTools
-using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, (..)
+using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, var".."
 import SpaceDataModel as SDM
 
 const CDFType = CDF.CDFDataType
