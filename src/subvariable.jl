@@ -10,7 +10,7 @@ function find_indices(tdim::Vector, interval::Interval)
     return i0:i1
 end
 
-# `Array`, as DiskArrays' `convert(Vector, ·)` throws on an unchunked array without elements (JuliaIO/DiskArrays.jl#348)
+# `issorted` reads every element: once, not one read each.
 find_indices(tdim::AbstractVector, interval::Interval) = find_indices(Array(tdim), interval)
 
 function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}

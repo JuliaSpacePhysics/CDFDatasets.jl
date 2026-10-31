@@ -3,7 +3,6 @@ using CDFDatasets: var_type, cdf_type
 using Test
 import CDFDatasets as CDF
 import CDFDatasets.CommonDataModel as CDM
-import CDFDatasets.DiskArrays
 using Dates
 using DimensionalData
 using Chairmarks
@@ -31,7 +30,6 @@ end
     var = ds["tha_pos"]
     tdim = CDM.dim(var, 2)
     @test tdim isa CDFVariable
-    @test parent(tdim) isa DiskArrays.AbstractDiskArray  # lazy, like other coordinates
     @test eltype(tdim) <: Dates.AbstractDateTime
     @test CDFDatasets.unix2timestamp(1.267056060123e9) == DateTime(2010, 2, 25, 0, 1, 0, 123)
     # subview keeps the swapped DEPEND_TIME coordinate
@@ -49,7 +47,6 @@ end
     var2 = CDFDataset(file2)["V"]
     var = cat(var1, var2; dims = 1)
     @test var == cat(var1, var2; dims = 1)
-    @test var.data isa DiskArrays.ConcatDiskArray
     @test var.data.parents[1] === var1
     @test var.data == vcat(var1.data, var2.data)
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
@@ -57,8 +54,7 @@ end
     @test CDM.dimnames(var) == CDM.dimnames(var1)
     @test SDM.times(SDM.DataVariable(var)) == vcat(SDM.times(var1), SDM.times(var2))
 
-    # files with zero records chunk as RegularChunks(1, 0, 0)
-    empty = CDFVariable(EmptyDiskVector(), "e", nothing, Dict())
+    empty = CDFVariable(Float32[], "e", nothing, Dict())
     @test isempty(Array(cat(empty, empty; dims = 1)))
     padded = cat(empty, var1, empty; dims = 1)
     @test size(padded) == size(var1)
@@ -81,7 +77,6 @@ end
     @test CDM.attribnames(concat_ds) == CDM.attribnames(ds1)
     var = concat_ds["V"]
     @test size(var) == (1464,)
-    @test var.data isa DiskArrays.ConcatDiskArray
     @test CDM.variable(var, "V") == var
     @test CDF.is_record_varying(var) == true
 
@@ -361,8 +356,34 @@ end
 
 @testset "Array operations" begin
     var = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))["V"]
-    @test var .* 2 isa DiskArrays.BroadcastDiskArray
-    @test convert(Vector, var) == Array(var)  # copyto! must not bounce between DiskArrays and broadcast
+    @test var .* 2 == Array(var) .* 2
+    @test convert(Vector, var) == Array(var)
+end
+
+struct CountingArray{T, N} <: CDF.AbstractLazyArray{T, N}
+    data::Array{T, N}
+    reads::Base.RefValue{Int}
+end
+Base.size(a::CountingArray) = size(a.data)
+function CDF.readregion!(a::CountingArray{T, N}, dest::AbstractArray{T}, r::Vararg{AbstractUnitRange, N}) where {T, N}
+    a.reads[] += 1
+    return copyto!(dest, view(a.data, r...))
+end
+
+@testset "lazy arrays read one region" begin
+    data = collect(reshape(1.0:60.0, 3, 4, 5))
+    a = CountingArray(data, Ref(0))
+    reads(f) = (a.reads[] = 0; f(); a.reads[])
+    v = view(a, :, 2:4, 1:5)
+    @test v[:, 1:2, 2:3] == data[:, 2:3, 2:3]
+    @test v[2, :, [5, 1]] == data[2, 2:4, [5, 1]]
+    @test reads(() -> v[:, 1:2, 2:3]) == 1
+    @test reads(() -> v[2, :, [5, 1]]) == 1
+    r = vec(a)
+    @test r[7:20] == vec(data)[7:20]
+    @test reads(() -> r[7:20]) == 1
+    @test a[[CartesianIndex(3, 2, 1), CartesianIndex(1, 1, 5)]] == data[[CartesianIndex(3, 2, 1), CartesianIndex(1, 1, 5)]]
+    @test a[[CartesianIndex(3), CartesianIndex(1)], 2, 2] == data[[3, 1], 2, 2]
 end
 
 include("test_show.jl")

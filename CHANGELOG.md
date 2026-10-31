@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking**: `CDFVariable` is an `AbstractArray` read on access, no longer a CommonDataModel `AbstractVariable` (nor a DiskArrays `AbstractDiskArray`). `CommonDataModel.attribs(var)`, `var.dim` and `var[name]` (a related variable) are gone. Broadcasting reads the variable.
+
 ## [0.4.0]
 
 ### Added

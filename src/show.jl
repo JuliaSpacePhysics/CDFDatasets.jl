@@ -11,8 +11,22 @@ end
 
 function Base.show(io::IO, var::AbstractCDFVariable)
     get(io, :limit, false) && return _show_limited(io, var)
-    return invoke(show, Tuple{IO, CDM.AbstractVariable}, io, var)
+    level = get(io, :level, 0)
+    indent = " "^level
+    delim = " × "
+    printstyled(io, indent, CDM.name(var); color = CDM.variable_color[])
+    print(io, " (", join(size(var), delim), ")\n")
+    print(io, indent, "  Datatype:    ")
+    printstyled(io, eltype(var); bold = true)
+    print(io, "\n", indent, "  Dimensions:  ", join(something.(CDM.dimnames(var), "?"), delim), "\n")
+    attrs = CDM.attrib(var)
+    if !isempty(attrs)
+        print(io, indent, "  Attributes:\n")
+        CDM.show_attrib(IOContext(io, :level => level + 3), attrs)
+    end
+    return
 end
+Base.show(io::IO, ::MIME"text/plain", var::AbstractCDFVariable) = show(io, var)
 
 function _show_limited(io::IO, var::AbstractCDFVariable)
     level = get(io, :level, 0)

@@ -1,7 +1,7 @@
 module CDFDatasets
 
 using CommonDataModel
-using CommonDataModel: AbstractDataset, AbstractVariable
+using CommonDataModel: AbstractDataset
 import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, dataset
 import CommonDataModel as CDM
 using CommonDataFormat
@@ -10,8 +10,6 @@ using Dates: AbstractDateTime, DateTime, Nanosecond
 using Durations: Durations, Timestamp
 import CommonDataFormat as CDF
 import CommonDataFormat: is_record_varying
-import DiskArrays
-using DiskArrays: AbstractDiskArray
 using PrecompileTools
 using IntervalSets: endpoints, isleftclosed, isrightclosed, Interval, var".."
 import SpaceDataModel as SDM
@@ -28,7 +26,9 @@ export ..
 export variable
 
 abstract type AbstractCDFDataset <: AbstractDataset end
-abstract type AbstractCDFVariable{T, N} <: AbstractVariable{T, N} end
+include("lazy.jl")
+
+abstract type AbstractCDFVariable{T, N} <: AbstractLazyArray{T, N} end
 
 include("dataset.jl")
 include("variable.jl")
@@ -48,8 +48,6 @@ cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
 cdfopen(files; kw...) = CDFDataset(collect(String, files); kw...)
 
 cdfopen(files, t0, t1; kw...) = view(cdfopen(files; kw...), Interval{:closed,:open}(t0, t1))
-
-CDM.Dimensions(var::AbstractCDFVariable) = ntuple(i -> dim(var, i), ndims(var))
 
 include("precompile.jl")
 
