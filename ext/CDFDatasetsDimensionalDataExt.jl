@@ -6,6 +6,7 @@ import CommonDataModel as CDM
 using DimensionalData
 using DimensionalData.Lookups: NoLookup
 import DimensionalData: DimArray
+using PrecompileTools
 
 dimtype(::Val{1}) = X
 dimtype(::Val{2}) = Y
@@ -26,5 +27,13 @@ DimensionalData.dims(v::AbstractCDFVariable) = ntuple(i -> format_dim(v, i), ndi
 
 DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib) =
     DimArray(Array(v), dims(v); name = CDM.name(v), metadata)
+
+# Workaround for https://github.com/rafaqz/DimensionalData.jl/pull/1250
+PrecompileTools.@compile_workload begin
+    var = cdfopen(joinpath(pkgdir(CDFDatasets), "data", "elb_l2_epdef_20210914_v01.cdf"))["elb_pef_Et_nflux"]
+    var[:, 1:2]
+    view(var, :, 1:2)[1, :]
+    DimArray(var)
+end
 
 end

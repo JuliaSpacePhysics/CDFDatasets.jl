@@ -125,12 +125,15 @@ CDFDataset(sources::AbstractVector{<:AbstractString}; kw...) = CDFDataset(CDF.CD
 function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
     var1 = (@something _source(ds, String(name)) _source1(ds))[name]
     md = @something metadata _attrib(ds.master, name, var1)
-    data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> source[name], ds.source), ndims(var1)) : var1
+    data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> _lazy(source[name]), ds.source), ndims(var1)) : _lazy(var1)
     return _variable(data, name, ds, md, merge(ds.checks, values(kw)))
 end
 
 _attrib(master, name, var) = isnothing(master) || !haskey(master, name) ? CDM.attrib(var) :
     SDM.OverlayDict(CDM.attrib(var), CDF.attrib(master[name]))
 
-# `data` is not inferred; a call boundary compiles construction for its concrete type.
+# Variables are not inferred; call boundaries compile construction for their concrete types
+@noinline _lazy(var::CDF.CDFVariable) = FileArray(var)
+_lazy(var) = var
+
 @noinline _variable(data, name, ds, metadata, kw) = CDFVariable(data, name, ds, metadata; kw...)

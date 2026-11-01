@@ -31,7 +31,7 @@ function _labels(var::CDFVariable, i::Integer)
     source = _source(dataset(var), String(p))
     isnothing(source) && return nothing
     lv = source[p]
-    l = vec(Array(lv))  # `Array` skips DiskArrays indexing
+    l = vec(Array(lv))
     inds = _viewindices(var)
     if !isnothing(inds)
         length(l) == size(parent(parent(var)), s) || return nothing
@@ -43,6 +43,9 @@ end
 
 # Labels along dimension `i`, which slicing keeps aligned with it.
 SDM.coords(var::CDFVariable) = [(i,) => l for i in 1:ndims(var) for l in (_labels(var, i),) if !isnothing(l)]
+
+SDM.name(var::CDFVariable) = CDM.name(var)
+SDM.getmeta(var::CDFVariable) = CDM.attrib(var)
 
 SDM.DataVariable(var::CDFVariable) = _datavariable(var, Array(var))
 

@@ -48,8 +48,9 @@ function CDFVariable(data, name, parentdataset, metadata; fillval = FromAttrib()
     return CDFVariable(data, name, parentdataset, metadata, mask)
 end
 
-# Fields are read with `getfield`: CommonDataModel's `getproperty` (for `.attrib` and `.dim`) is not
-# always constant-folded, and then boxes `var` on every access.
+Base.getproperty(var::CDFVariable, s::Symbol) = s === :attrib ? CDM.attrib(var) : getfield(var, s)
+Base.propertynames(var::CDFVariable, private::Bool = false) = (fieldnames(CDFVariable)..., :attrib)
+
 Base.parent(var::CDFVariable) = getfield(var, :data)
 _mask(var::CDFVariable) = getfield(var, :mask)
 Base.size(var::CDFVariable) = size(parent(var))
@@ -69,38 +70,23 @@ end
 Base.reshape(var::CDFVariable, dims::Dims) =
     _hascomponents(_mask(var)) ? reshape(Array(var), dims) : rebuild(var, reshape(parent(var), dims))
 
-function DiskArrays.readblock!(a::CDFVariable, aout, inds::AbstractUnitRange...)
+function readregion!(a::CDFVariable, aout, inds::AbstractUnitRange...)
     m = _mask(a)
-    isnothing(m) ? _readraw!(parent(a), aout, inds...) : _readmasked!(parent(a), aout, m, inds)
+    isnothing(m) ? readregion!(parent(a), aout, inds...) : _readmasked!(parent(a), aout, m, inds)
     return aout
 end
 
-# Function barrier: DiskArrays may infer `aout` abstractly (e.g. `Array{Float32}`), which would
-# compile this path generically for every variable type.
 function _readmasked!(data, aout, m, inds)
     # The kernel runs on `Array`s only: on a view it would compile generic reshaped-view indexing.
     # Float data is read straight into `aout` and masked in place.
     inplace = aout isa Array && eltype(aout) === eltype(data)
-    raw = _readraw!(data, inplace ? aout : Array{eltype(data)}(undef, size(aout)), inds...)
+    raw = inplace ? aout : Array{eltype(data)}(undef, size(aout))
+    readregion!(data, raw, inds...)
     out = aout isa Array ? aout : similar(raw, eltype(aout))
     SDM.mask_invalid!(out, raw, m[inds[1]], 1)
     out === aout || copyto!(aout, out)
     return aout
 end
-
-_readraw!(d::AbstractDiskArray, aout, inds...) = (DiskArrays.readblock!(d, aout, inds...); aout)
-# Through the parent's own `_readraw!` (e.g. the concatenation fast path)
-function _readraw!(d::DiskArrays.SubDiskArray, aout, inds::Vararg{Any, N}) where {N}  # `N` specialize
-    pinds = Base.reindex(parentindices(d), inds)
-    all(i -> i isa Union{Integer, AbstractUnitRange}, pinds) || return (DiskArrays.readblock!(d, aout, inds...); aout)
-    _readraw!(parent(d), reshape(aout, map(length, pinds)), map(i -> i isa Integer ? (i:i) : i, pinds)...)
-    return aout
-end
-_readraw!(d, aout, inds...) = copyto!(aout, view(d, inds...))
-
-# DiskArrays gives an unchunked broadcast (e.g. a DEPEND_TIME conversion) without elements chunks of size 0, which it rejects (JuliaIO/DiskArrays.jl#348)
-DiskArrays.eachchunk(var::CDFVariable{T, N, <:AbstractDiskArray}) where {T, N} =
-    isempty(var) ? DiskArrays.GridChunks(size(var), max.(size(var), 1)) : DiskArrays.eachchunk(parent(var))
 
 CDM.name(var::CDFVariable) = getfield(var, :name)
 CDM.dataset(var::CDFVariable) = getfield(var, :parentdataset)
@@ -112,9 +98,8 @@ CDM.variable(var::CDFVariable, name::String) = variable(dataset(var), name)
 # File variable backing `var`, through storage wrappers.
 _filevar(var::CDFVariable) = _filevar(parent(var))
 _filevar(data) = data
-_filevar(data::DiskArrays.BroadcastDiskArray) = _filevar(only(data.broadcasted.args))
-_filevar(data::DiskArrays.ConcatDiskArray) = _filevar(first(data.parents))
-_filevar(data::Union{SubArray, DiskArrays.SubDiskArray}) = _filevar(parent(data))
+_filevar(data::FileArray) = data.var
+_filevar(data::SubArray) = _filevar(parent(data))
 
 function CDM.dimnames(var::CDFVariable, i::Int)
     d = get(CDM.attrib(var), _isrecorddim(var, i) ? "DEPEND_0" : "DEPEND_$(_storeddim(var, i))", nothing)
@@ -146,12 +131,10 @@ function depend(var::CDFVariable, i::Int)
     return dname == dimnames(var, i) ? dataset(var)[dname] : depend_time(var)
 end
 
-const _SubView = Union{SubArray, DiskArrays.SubDiskArray}
-
-# Indices of a view into the stored variable (DiskArrays and Base flatten nested views), whose integer
+# Indices of a view into the stored variable (Base flattens nested views), whose integer
 # indices drop dimensions: attributes such as `DEPEND_i` number the stored dimensions.
 _viewindices(var::CDFVariable) = _viewindices(parent(var))
-_viewindices(data::_SubView) = parentindices(data)
+_viewindices(data::SubArray) = parentindices(data)
 _viewindices(data) = nothing
 
 function _storeddim(var::CDFVariable, i)
@@ -167,7 +150,7 @@ function _isrecorddim(var::CDFVariable, i)
 end
 
 # The coordinate of the stored variable, sliced like `var`: along its values (first) and records (last).
-function depend(var::CDFVariable{T, N, <:_SubView}, i::Int) where {T, N}
+function depend(var::CDFVariable{T, N, <:SubArray}, i::Int) where {T, N}
     whole = rebuild(var, parent(parent(var)))
     inds, s, R = _viewindices(var), _storeddim(var, i), ndims(whole)
     dvar = depend(whole, s)
@@ -192,7 +175,23 @@ CDF.is_record_varying(var::CDFVariable) = is_record_varying(_filevar(var))
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
     dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return CDFVariable(unix2timestamp.(parent(dimvar)), CDM.name(dimvar), dataset(dimvar), CDM.attrib(dimvar))
+    return CDFVariable(Mapped(unix2timestamp, parent(dimvar)), CDM.name(dimvar), dataset(dimvar), CDM.attrib(dimvar))
+end
+
+# Lazy `f.(parent)`
+struct Mapped{T, N, F, P <: AbstractArray{<:Any, N}} <: AbstractLazyArray{T, N}
+    f::F
+    parent::P
+end
+Mapped(f, p::AbstractArray) = Mapped{Base.promote_op(f, eltype(p)), ndims(p), typeof(f), typeof(p)}(f, p)
+Base.size(m::Mapped) = size(m.parent)
+Base.parent(m::Mapped) = m.parent
+_filevar(m::Mapped) = _filevar(parent(m))
+function readregion!(m::Mapped, dest, inds::AbstractUnitRange...)
+    raw = Array{eltype(m.parent)}(undef, map(length, inds))
+    readregion!(m.parent, raw, inds...)
+    dest .= m.f.(raw)
+    return dest
 end
 
 # Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values

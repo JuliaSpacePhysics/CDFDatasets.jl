@@ -16,6 +16,8 @@ PrecompileTools.@setup_workload begin
 
         for ds in (cdfopen(elb), cdfopen([elb, elb]))
             ds["elb_pef_Et_nflux"][:, :]
+            ds["elb_pef_Et_nflux"][:, 1:2]
+            view(ds["elb_pef_Et_nflux"], :, 1:2)[1, :]
             ds["elb_pef_pa"][:]  # 1-D Float32
             Array(ds["elb_pef_sectnum"])  # Int8 decoded to Float32
             ds["elb_pef_hs_Epat_eflux"][:, :, :]  # energy × pitch angle × time
