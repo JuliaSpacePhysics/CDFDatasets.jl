@@ -209,6 +209,7 @@ end
         @test isequal(Array(selectdim(lazy, 1, 2)), decoded[2, :])
         @test isequal(Array(view(lazy, :)), vec(decoded))
         @test isequal(Array(reshape(lazy, (1, 9))), reshape(decoded, 1, 9))
+        @test !(reshape(lazy, (1, 9)) isa CDFVariable)  # its attributes describe the stored dimensions
         @test isequal(Array(cat(lazy, lazy; dims = 1)), vcat(decoded, decoded))
         # bounds whose length matches no dimension: equal values act as one, others are dropped
         scalar = CDF.CDFVariable(view(Float32[1, -7.0e4], :), "s", nothing, Dict("VALIDMIN" => [-6.0e4, -6.0e4, -6.0e4]))

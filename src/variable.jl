@@ -64,9 +64,6 @@ function Base.view(var::CDFVariable, I...)
     return rebuild(var, view(parent(var), I...), m)
 end
 
-Base.reshape(var::CDFVariable, dims::Dims) =
-    _hascomponents(_mask(var)) ? reshape(Array(var), dims) : rebuild(var, reshape(parent(var), dims))
-
 function readregion!(a::CDFVariable, aout, inds::AbstractUnitRange...)
     m = _mask(a)
     isnothing(m) ? readregion!(parent(a), aout, inds...) : _readmasked!(parent(a), aout, m, inds)
