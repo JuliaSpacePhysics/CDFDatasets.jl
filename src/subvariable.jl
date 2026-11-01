@@ -16,7 +16,7 @@ find_indices(tdim::AbstractVector, interval::Interval) = find_indices(Array(tdim
 function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
     N = ndims(var)
     T <: AbstractDateTime || !isnothing(SDM.tdimnum(var)) ||
-        throw(ArgumentError("Interval indexing requires a time coordinate (a DEPEND_0 of times); none found for $(CDM.name(var)); pass a `master` or `metadata` naming one"))
+        throw(ArgumentError("Interval indexing requires a time coordinate (a DEPEND_0 of times); none found for $(SDM.name(var)); pass a `master` or `metadata` naming one"))
     tdim = T <: AbstractDateTime ? var : depend(var, N)
     return selectdim(var, N, find_indices(tdim, interval))
 end

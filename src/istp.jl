@@ -4,9 +4,9 @@
 
 # Values are free-form strings ("1", "01", "2.0", "v3.4.0"); VersionNumber parses all and orders them correctly.
 function data_version(ds)
-    dv = get(CDM.attribs(ds), "Data_version", nothing)
+    dv = get(ds.attrib, "Data_version", nothing)
     isnothing(dv) && return nothing
     v = dv isa AbstractVector ? only(dv) : dv
     return VersionNumber(v isa AbstractString ? strip(v) : v)
 end
-var_type(var) = get(var.metadata, "VAR_TYPE", "")
+var_type(var) = get(var.attrib, "VAR_TYPE", "")

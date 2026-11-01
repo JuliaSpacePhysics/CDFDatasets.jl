@@ -4,7 +4,7 @@
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
 
-A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets compatible with the [CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl) interface.
+A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets.
 
 
 ## Quick Start
@@ -18,6 +18,8 @@ times = ds["Epoch"]
 bx = ds["BR"]
 ds = cdfopen(files, t0, t1)  # files concatenated along records; variables with a time coordinate restricted to [t0, t1)
 ```
+
+`keys(ds)` lists variables; `ds.attrib` and `var.attrib` are attribute dictionaries; `depend(var, i)` is the `DEPEND_i` coordinate variable, or `nothing`.
 
 ## Missing values
 

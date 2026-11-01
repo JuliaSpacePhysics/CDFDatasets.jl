@@ -1,9 +1,5 @@
 module CDFDatasets
 
-using CommonDataModel
-using CommonDataModel: AbstractDataset
-import CommonDataModel: dimnames, varnames, variable, attribnames, attrib, dim, dataset
-import CommonDataModel as CDM
 using CommonDataFormat
 using CommonDataFormat: TT2000, Epoch, Epoch16
 using Dates: AbstractDateTime, DateTime, Nanosecond
@@ -20,12 +16,11 @@ export CDFDataset, CDFVariable
 export cdfopen
 export TT2000, Epoch, Epoch16
 export CDFType, cdf_type
-export dim, depend
+export depend
 export is_record_varying
 export ..
 export variable
 
-abstract type AbstractCDFDataset <: AbstractDataset end
 include("lazy.jl")
 
 abstract type AbstractCDFVariable{T, N} <: AbstractLazyArray{T, N} end
@@ -42,7 +37,7 @@ include("show.jl")
     cdfopen(file; kw...) :: CDFDataset
     cdfopen(files, [t0, t1]; kw...) :: CDFDataset
 
-Opens CDF file(s) as a `AbstractCDFDataset`, and restricts variables with a time coordinate to `[t0, t1)` when provided.
+Opens CDF file(s) as a `CDFDataset`, and restricts variables with a time coordinate to `[t0, t1)` when provided.
 """
 cdfopen(file::AbstractString; kw...) = CDFDataset(file; kw...)
 cdfopen(files; kw...) = CDFDataset(collect(String, files); kw...)
