@@ -1,5 +1,4 @@
 using CDFDatasets
-import CDFDatasets.CommonDataModel as CDM
 using Dates
 using DimensionalData
 using Chairmarks
@@ -32,10 +31,3 @@ vds = view(concat_ds, t0 .. t1)
 # Array materialization
 @info @b Array($concat_ds["Epoch"])
 @info @b Array($vds["Epoch"])
-
-# Dimension access
-@info @b CDM.dim($var, 1)
-@info @b CDM.dim($subvar, 1)
-
-# Dataset reconstruction
-@info @b CDM.dataset($var)

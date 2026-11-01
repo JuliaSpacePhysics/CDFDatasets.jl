@@ -1,6 +1,5 @@
 using BenchmarkTools
 using CDFDatasets
-using CommonDataModel
 using Dates
 using DimensionalData
 using CDFDatasets: SDM
@@ -64,5 +63,5 @@ SUITE["dimarray"]["single"] = @benchmarkable DimArray($OMNI_V)
 SUITE["dimarray"]["concat"] = @benchmarkable DimArray($OMNI_MULTI_V)
 SUITE["dimarray"]["clip"] = @benchmarkable DimArray($OMNI_MULTI_VIEW["V"])
 
-SUITE["metadata"]["dim"] = @benchmarkable CommonDataModel.dim($OMNI_MULTI_V, 1)
-SUITE["metadata"]["dataset"] = @benchmarkable CommonDataModel.dataset($OMNI_MULTI_V)
+SUITE["metadata"]["depend"] = @benchmarkable CDFDatasets.depend($OMNI_MULTI_V, 1)
+SUITE["metadata"]["dataset"] = @benchmarkable CDFDatasets.dataset($OMNI_MULTI_V)
