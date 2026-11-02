@@ -48,14 +48,13 @@ function CDFVariable(data, name, parentdataset, metadata; fillval = FromAttrib()
     return CDFVariable(data, name, parentdataset, metadata, mask)
 end
 
-Base.parent(var::CDFVariable) = getfield(var, :data)
-_mask(var::CDFVariable) = getfield(var, :mask)
+Base.parent(var::CDFVariable) = var.data
 Base.size(var::CDFVariable) = size(parent(var))
 
-rebuild(var::CDFVariable{T}, data, mask = _mask(var)) where {T} = CDFVariable{T}(data, SDM.name(var), getfield(var, :parentdataset), var.attrib, mask)
+rebuild(var::CDFVariable{T}, data, mask = var.mask) where {T} = CDFVariable{T}(data, var.name, var.parentdataset, var.attrib, mask)
 
 function Base.view(var::CDFVariable, I...)
-    m = _mask(var)
+    m = var.mask
     if _hascomponents(m)
         # Linear indexing mixes components; decode first.
         length(I) == 1 && ndims(var) > 1 && return view(Array(var), I...)
@@ -65,7 +64,7 @@ function Base.view(var::CDFVariable, I...)
 end
 
 function readregion!(a::CDFVariable, aout, inds::AbstractUnitRange...)
-    m = _mask(a)
+    m = a.mask
     isnothing(m) ? readregion!(parent(a), aout, inds...) : _readmasked!(parent(a), aout, m, inds)
     return aout
 end
@@ -82,8 +81,8 @@ function _readmasked!(data, aout, m, inds)
     return aout
 end
 
-SDM.name(var::CDFVariable) = getfield(var, :name)
-dataset(var::CDFVariable) = getfield(var, :parentdataset)
+SDM.name(var::CDFVariable) = var.name
+dataset(var::CDFVariable) = var.parentdataset
 
 # File variable backing `var`, through storage wrappers.
 _filevar(var::CDFVariable) = _filevar(parent(var))
