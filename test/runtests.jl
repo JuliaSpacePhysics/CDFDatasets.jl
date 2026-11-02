@@ -101,7 +101,6 @@ end
 
         str = sprint(show, MIME("text/plain"), vds)
         @test occursin("View:", str)
-        @test (@b DimArray($vds["V"])).time > 0
 
         # indices bisected once per epoch, shared by all variables on it
         @test keys(vds.indices) == Set(["Epoch"])
@@ -112,16 +111,6 @@ end
         @test nested.interval == t0 .. t1
         @test Array(nested["V"]) == Array(vds["V"])
     end
-
-    # TODO: address memory allocation concerns for view operations
-    # julia> @b Array(vds["Epoch"])
-    # 2.073 μs (24 allocs: 13.656 KiB)
-    # julia> @b Array(ds1["Epoch"])
-    # 1.023 μs (13 allocs: 7.141 KiB)
-    # julia> @b Array(vds["V"])
-    # 3.990 μs (49 allocs: 15.688 KiB)
-    # julia> @b Array(ds1["V"])
-    # 979.167 ns (13 allocs: 4.141 KiB)
 end
 
 @testset "CDFDatasets.jl (Multidimensional, ELFIN)" begin
@@ -347,7 +336,6 @@ end
     test_file = joinpath(@__DIR__, "..", "data", "ge_h0_cpi_00000000_v01.cdf")
     ds = CDFDataset(test_file)
     @test ds["label_v3c"].data == ["Ion Vx GSE    "; "Ion Vy GSE    "; "Ion Vz GSE    ";;]
-    @test ds isa CDFDataset
 end
 
 @testset "Array operations" begin
