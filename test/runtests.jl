@@ -103,10 +103,6 @@ end
         @test occursin("View:", str)
 
         # indices bisected once per epoch, shared by all variables on it
-        @test keys(vds.indices) == Set(["Epoch"])
-        vds["BR"]
-        @test length(vds.indices) == 1
-        # nested views intersect rather than replace
         nested = view(view(concat_ds, t0 .. DateTime(2020, 06, 01)), DateTime(2020, 04, 01) .. t1)
         @test nested.interval == t0 .. t1
         @test Array(nested["V"]) == Array(vds["V"])

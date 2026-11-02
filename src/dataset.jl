@@ -1,13 +1,11 @@
 const SymbolString = Union{String, Symbol}
 
-struct LockedDict{K, V} <: AbstractDict{K, V}
+struct LockedDict{K, V}
     d::Dict{K, V}
     lock::ReentrantLock
 end
 LockedDict{K, V}() where {K, V} = LockedDict(Dict{K, V}(), ReentrantLock())
 Base.get!(f::Base.Callable, ld::LockedDict, k) = @lock ld.lock get!(f, ld.d, k)
-Base.keys(ld::LockedDict) = @lock ld.lock keys(ld.d)
-Base.length(ld::LockedDict) = @lock ld.lock length(ld.d)
 
 struct CDFDataset{A, I, D, C <: NamedTuple, M}
     source::A
