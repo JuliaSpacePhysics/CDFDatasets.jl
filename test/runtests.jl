@@ -321,11 +321,17 @@ end
     @test cdfopen(ge; master).attrib["Logical_source"] == cdfopen(ge).attrib["Logical_source"] != ["labl_ptr"]
 end
 
-@testset "Fewer records than the time coordinate" begin
-    ds = cdfopen(data_path("labl_ptr.cdf"), DateTime(2020), DateTime(2021))
+@testset "No records written" begin
+    file = data_path("labl_ptr.cdf")
+    t = DateTime(2020) .. DateTime(2021)
+    ds = view(cdfopen(file), t)
+    # `unwritten` first: its empty records must not clip `flux`, which shares its coordinate.
     @test size(ds["unwritten"]) == (0,)
+    @test size(ds["flux"]) == (3, 2)
     @test size(ds["unwritten_epoch"]) == (0,)
     @test size(ds["unwritten_swapped"]) == (0,)
+    @test size(cdfopen(file)["unwritten"][t]) == (0,)
+    @test size(view(cdfopen([file, file]), t)["unwritten"]) == (0,)
 end
 
 @testset "CDFDataset" begin

@@ -73,26 +73,21 @@ attributes (README: Missing values).
 variable(ds::CDFDataset, name::Symbol; kw...) = variable(ds, String(name); kw...)
 function variable(ds::CDFDataset, name::String; metadata = nothing, kw...)
     _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)
-    var = _variable_unclipped(_unclipped(ds), name; metadata, kw...)
-    is_record_varying(var) || return var
-    N = ndims(var)
-    is_epoch = eltype(var) <: AbstractDateTime
-    key = is_epoch ? name : dimvarname(var, N)
-    isnothing(key) && return var
-    # `nothing` for a coordinate not of times, which leaves the variable whole
-    indices = get!(ds.indices, key) do
-        tdim = is_epoch ? var : depend(var, N)
-        eltype(tdim) <: AbstractDateTime ? find_indices(tdim, ds.interval) : nothing
-    end
-    isnothing(indices) && return var
-    return _selectrecords(var, indices)
+    return _clip(ds, _variable_unclipped(_unclipped(ds), name; metadata, kw...), name)
 end
 
-# Records align by number within a file, so a variable with fewer than its time coordinate keeps those it has
-function _selectrecords(var, indices)
+function _clip(ds::CDFDataset, var, name)
     N = ndims(var)
-    n = size(var, N)
-    return selectdim(var, N, isempty(indices) || last(indices) <= n ? indices : filter(<=(n), indices))
+    # nothing to clip without records, and empty indices must not be cached for the coordinate
+    is_record_varying(var) && size(var, N) > 0 || return var
+    key = eltype(var) <: AbstractDateTime ? name : dimvarname(var, N)
+    isnothing(key) && return var
+    indices = get!(ds.indices, key) do
+        tdim = _timecoord(var)
+        isnothing(tdim) ? nothing : find_indices(tdim, ds.interval)
+    end
+    isnothing(indices) && return var
+    return selectdim(var, N, indices)
 end
 
 function Base.keys(ds::CDFDataset)
