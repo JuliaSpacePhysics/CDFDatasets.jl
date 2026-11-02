@@ -1,12 +1,46 @@
-function show_var_names(io::IO, indent, label, names)
+function show_var_names(io::IO, label, names)
     isempty(names) && return
-    printstyled(io, indent, label; color = :red)
+    printstyled(io, label; color = :red)
     printstyled(io, join(names, ", "), "\n"; bold = true)
     return
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ds::CDFDataset)
-    return _show(io, ds)
+    _has_interval(ds) && print(io, "View: ", ds.interval, "\n")
+    isempty(ds.checks) || print(io, "Checks: ", ds.checks, "\n")
+    isnothing(ds.master) || print(io, "Master: ", path(ds.master), "\n")
+
+    printstyled(io, "Dataset: ", path(ds), "\n", color = :red)
+    print(io, "Group: ", SDM.name(ds), "\n\n")
+
+    varnames = keys(ds)
+    if length(varnames) > 0
+        printstyled(io, "Data variables\n", color = :red)
+
+        vars = [ds[name] for name in varnames]
+        types = map(var_type, vars)
+        for (var, type) in zip(vars, types)
+            type == "data" || continue
+            show(IOContext(io, :level => 2), var)
+            print(io, "\n")
+        end
+
+        show_var_names(io, "Support variables: ", varnames[types .== "support_data"])
+        show_var_names(io, "Metadata variables: ", varnames[types .== "metadata"])
+        show_var_names(io, "Other variables: ", varnames[types .∉ Ref(("data", "support_data", "metadata"))])
+    end
+
+    attrs = ds.attrib
+    if !isempty(attrs)
+        printstyled(io, "Global attributes\n", color = :red)
+        attr_io = IOContext(io, :level => 2)
+        if get(io, :limit, false)
+            show_attrib_summary(attr_io, attrs)
+        else
+            show_attrib(attr_io, attrs)
+        end
+    end
+    return
 end
 
 function Base.show(io::IO, var::AbstractCDFVariable)
@@ -73,57 +107,6 @@ function show_attrib_summary(io::IO, attrs)
         length(names) > n_show && print(io, ", ...")
     end
     print(io, "\n")
-    return
-end
-
-function _show(io::IO, ds::CDFDataset)
-    level = get(io, :level, 0)
-    indent = " "^level
-
-    if ds isa CDFDataset && _has_interval(ds)
-        print(io, indent, "View: ", ds.interval, "\n")
-    end
-    if ds isa CDFDataset && !isempty(ds.checks)
-        print(io, indent, "Checks: ", ds.checks, "\n")
-    end
-    if ds isa CDFDataset && !isnothing(ds.master)
-        print(io, indent, "Master: ", path(ds.master), "\n")
-    end
-
-    printstyled(io, indent, "Dataset: ", path(ds), "\n", color = :red)
-
-    print(io, indent, "Group: ", SDM.name(ds), "\n")
-    print(io, "\n")
-
-    varnames = keys(ds)
-
-    if length(varnames) > 0
-        printstyled(io, indent, "Data variables\n", color = :red)
-
-        vars = [ds[name] for name in varnames]
-        types = map(var_type, vars)
-        for (var, type) in zip(vars, types)
-            type == "data" || continue
-            show(IOContext(io, :level => level + 2, :limit => get(io, :limit, false)), var)
-            print(io, "\n")
-        end
-
-        show_var_names(io, indent, "Support variables: ", varnames[types .== "support_data"])
-        show_var_names(io, indent, "Metadata variables: ", varnames[types .== "metadata"])
-        show_var_names(io, indent, "Other variables: ", varnames[types .∉ Ref(("data", "support_data", "metadata"))])
-    end
-
-    # global attribues
-    attrs = ds.attrib
-    if !isempty(attrs)
-        printstyled(io, indent, "Global attributes\n", color = :red)
-        attr_io = IOContext(io, :level => level + 2)
-        if get(io, :limit, false)
-            show_attrib_summary(attr_io, attrs)
-        else
-            show_attrib(attr_io, attrs)
-        end
-    end
     return
 end
 
