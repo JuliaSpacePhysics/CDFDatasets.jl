@@ -51,7 +51,7 @@ end
 Base.parent(var::CDFVariable) = var.data
 Base.size(var::CDFVariable) = size(parent(var))
 
-rebuild(var::CDFVariable{T}, data, mask = var.mask) where {T} = CDFVariable{T}(data, var.name, var.parentdataset, var.attrib, mask)
+_withdata(var::CDFVariable{T}, data, mask = var.mask) where {T} = CDFVariable{T}(data, var.name, var.parentdataset, var.attrib, mask)
 
 function Base.view(var::CDFVariable, I...)
     m = var.mask
@@ -60,7 +60,7 @@ function Base.view(var::CDFVariable, I...)
         length(I) == 1 && ndims(var) > 1 && return view(Array(var), I...)
         m = m[first(to_indices(var, I))]
     end
-    return rebuild(var, view(parent(var), I...), m)
+    return _withdata(var, view(parent(var), I...), m)
 end
 
 function readregion!(a::CDFVariable, aout, inds::AbstractUnitRange...)
@@ -135,7 +135,7 @@ end
 
 # The coordinate of the stored variable, sliced like `var`: along its values (first) and records (last).
 function depend(var::CDFVariable{T, N, <:SubArray}, i::Int) where {T, N}
-    whole = rebuild(var, parent(parent(var)))
+    whole = _withdata(var, parent(parent(var)))
     inds, s, R = _viewindices(var), _storeddim(var, i), ndims(whole)
     dvar = depend(whole, s)
     isnothing(dvar) && return nothing
