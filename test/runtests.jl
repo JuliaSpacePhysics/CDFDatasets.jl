@@ -14,10 +14,9 @@ include("utils.jl")
     Aqua.test_all(CDFDatasets)
 end
 
-# JET refuses to analyze on Julia prereleases
-if isempty(VERSION.prerelease)
+using JET
+if JET.JET_AVAILABLE
     @testset "JET static analysis" begin
-        using JET
         JET.test_package(CDFDatasets; target_modules = [CDFDatasets])
     end
 end
