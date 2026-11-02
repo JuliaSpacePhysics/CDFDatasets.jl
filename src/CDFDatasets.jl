@@ -29,7 +29,6 @@ include("dataset.jl")
 include("variable.jl")
 include("istp.jl")
 include("concat.jl")
-include("subvariable.jl")
 include("timeseries.jl")
 include("show.jl")
 
