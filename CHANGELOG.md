@@ -5,6 +5,7 @@
 ### Changed
 
 - **Breaking**: `CDFVariable` is an `AbstractArray` read on access, no longer a CommonDataModel `AbstractVariable` (nor a DiskArrays `AbstractDiskArray`). `CommonDataModel.attribs(var)`, `var.dim` and `var[name]` (a related variable) are gone. Broadcasting reads the variable.
+- **Breaking**: CommonDataModel support is dropped ([why](docs/dev/CommonDataModel.md)): `CDFDataset` is no longer an `AbstractDataset`, and the CommonDataModel names under `CDFDatasets.` (`dim`, `attrib`, `name`, …) are removed; use `ds.attrib`, `var.attrib`, `keys(ds)`, `SpaceDataModel.name(x)`.
 
 ## [0.4.0]
 
@@ -49,10 +50,6 @@
 - **Breaking**: Remove exported `ConcatCDFDataset`; multi-file datasets are represented by `CDFDataset` with multiple sources.
 - **Breaking**: Remove internal `ClippedCDFDataset`; dataset views are represented by `CDFDataset` with an interval.
 - **Breaking**: `CDFVariable` type parameters are now ordered as `{T, N, A, S, P, MD}` so storage type `A` is the first dispatch parameter after element type and rank.
-
-## [TODO]
-
-- [ ] Full support for `CommonDataModel.jl` interface
 
 [Unreleased]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/JuliaSpacePhysics/CDFDatasets.jl/compare/v0.2.0...v0.3.0

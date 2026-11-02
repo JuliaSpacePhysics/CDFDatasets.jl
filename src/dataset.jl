@@ -1,3 +1,5 @@
+const SymbolString = Union{String, Symbol}
+
 struct LockedDict{K, V} <: AbstractDict{K, V}
     d::Dict{K, V}
     lock::ReentrantLock
@@ -7,7 +9,7 @@ Base.get!(f::Base.Callable, ld::LockedDict, k) = @lock ld.lock get!(f, ld.d, k)
 Base.keys(ld::LockedDict) = @lock ld.lock keys(ld.d)
 Base.length(ld::LockedDict) = @lock ld.lock length(ld.d)
 
-struct CDFDataset{A, I, D, C <: NamedTuple, M} <: AbstractCDFDataset
+struct CDFDataset{A, I, D, C <: NamedTuple, M}
     source::A
     interval::I
     indices::D
@@ -35,22 +37,17 @@ end
 """
     CDFDataset(file; checks = (;), master = nothing)
 
-Load the CDF dataset at the `file` path. The dataset supports the API of the
-[JuliaGeo/CommonDataModel.jl](https://github.com/JuliaGeo/CommonDataModel.jl).
-
-Global attributes are entry vectors.
+Load the CDF dataset at the `file` path. Global attributes are entry vectors.
 """
 CDFDataset(file::AbstractString; kw...) = CDFDataset(CDF.CDFDataset(file); kw...)
 
-# Base interface
 Base.parent(ds::CDFDataset) = ds.source
-Base.getindex(ds::AbstractCDFDataset, name::String) = CDM.variable(ds, name)
+Base.getindex(ds::CDFDataset, name::SymbolString) = variable(ds, name)
+Base.getproperty(ds::CDFDataset, s::Symbol) = s === :attrib ? _attrib(ds) : getfield(ds, s)
+Base.propertynames(ds::CDFDataset, private::Bool = false) = (fieldnames(typeof(ds))..., :attrib)
 
-Base.view(ds::AbstractCDFDataset, interval::Interval) =
+Base.view(ds::CDFDataset, interval::Interval) =
     CDFDataset(ds.source, _has_interval(ds) ? intersect(ds.interval, interval) : interval; ds.checks, ds.master)
-
-# CommonDataModel.jl interface methods
-const SymbolString = Union{String, Symbol}
 
 _is_multi_source(ds::CDFDataset) = ds.source isa AbstractVector
 _source1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
@@ -75,13 +72,14 @@ _unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks, ds.master)
 Variable `name` of `ds`, also `ds[name]`. The keywords override the dataset's `checks` and the
 attributes (README: Missing values).
 """
-function CDM.variable(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
+variable(ds::CDFDataset, name::Symbol; kw...) = variable(ds, String(name); kw...)
+function variable(ds::CDFDataset, name::String; metadata = nothing, kw...)
     _has_interval(ds) || return _variable_unclipped(ds, name; metadata, kw...)
     var = _variable_unclipped(_unclipped(ds), name; metadata, kw...)
     is_record_varying(var) || return var
     N = ndims(var)
     is_epoch = eltype(var) <: AbstractDateTime
-    key = is_epoch ? String(name) : dimvarname(var, N)
+    key = is_epoch ? name : dimvarname(var, N)
     isnothing(key) && return var
     # `nothing` for a coordinate not of times, which leaves the variable whole
     indices = get!(ds.indices, key) do
@@ -99,38 +97,31 @@ function _selectrecords(var, indices)
     return selectdim(var, N, isempty(indices) || last(indices) <= n ? indices : filter(<=(n), indices))
 end
 
-function CDM.varnames(ds::CDFDataset)
-    names, m = CDM.varnames(_source1(ds)), ds.master
+function Base.keys(ds::CDFDataset)
+    names, m = keys(_source1(ds)), ds.master
     isnothing(m) && return names
-    return vcat(names, filter(n -> n ∉ names && _holds_values(m[n]), CDM.varnames(m)))
+    return vcat(names, filter(n -> n ∉ names && _holds_values(m[n]), keys(m)))
 end
-# CommonDataModel's fallback allocates every variable name.
-Base.haskey(ds::AbstractCDFDataset, name::SymbolString) = !isnothing(_source(ds, String(name)))
+Base.haskey(ds::CDFDataset, name::SymbolString) = !isnothing(_source(ds, String(name)))
 
-function CDM.attribnames(ds::CDFDataset)
-    names, m = CDM.attribnames(_source1(ds)), ds.master
-    return isnothing(m) ? names : union(names, CDM.attribnames(m))
-end
+# The master's global attributes fill the file's gaps, whereas a variable's overlay the file's.
+_attrib(ds::CDFDataset) = (a = _source1(ds).attrib; isnothing(ds.master) ? a : SDM.OverlayDict(ds.master.attrib, a))
 
-function CDM.attrib(ds::CDFDataset, name::SymbolString)
-    src, m = _source1(ds), ds.master
-    return isnothing(m) || String(name) in CDM.attribnames(src) ? CDM.attrib(src, name) : CDM.attrib(m, name)
-end
-
-CDM.path(ds::CDFDataset) = _is_multi_source(ds) ? CDM.path.(parent(ds)) : CDM.path(parent(ds))
-CDM.name(ds::AbstractCDFDataset) = join(get(ds.attrib, "Logical_source", '/'), '/')
+path(ds::CDFDataset) = _is_multi_source(ds) ? path.(parent(ds)) : path(parent(ds))
+path(ds::CDF.CDFDataset) = CDF.filename(ds)
+SDM.name(ds::CDFDataset) = join(get(ds.attrib, "Logical_source", '/'), '/')
 
 CDFDataset(sources::AbstractVector{<:AbstractString}; kw...) = CDFDataset(CDF.CDFDataset.(sources); kw...)
 
-function _variable_unclipped(ds::CDFDataset, name::SymbolString; metadata = nothing, kw...)
-    var1 = (@something _source(ds, String(name)) _source1(ds))[name]
-    md = @something metadata _attrib(ds.master, name, var1)
+function _variable_unclipped(ds::CDFDataset, name::String; metadata = nothing, kw...)
+    var1 = (@something _source(ds, name) _source1(ds))[name]
+    md = @something metadata _varattrib(ds.master, name, var1)
     data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> _lazy(source[name]), ds.source), ndims(var1)) : _lazy(var1)
     return _variable(data, name, ds, md, merge(ds.checks, values(kw)))
 end
 
-_attrib(master, name, var) = isnothing(master) || !haskey(master, name) ? CDM.attrib(var) :
-    SDM.OverlayDict(CDM.attrib(var), CDF.attrib(master[name]))
+_varattrib(master, name, var) = isnothing(master) || !haskey(master, name) ? var.attrib :
+    SDM.OverlayDict(var.attrib, master[name].attrib)
 
 # Variables are not inferred; call boundaries compile construction for their concrete types
 @noinline _lazy(var::CDF.CDFVariable) = FileArray(var)

@@ -46,5 +46,5 @@ _filevar(data::ConcatArray) = _filevar(first(data.parents))
 # Each part decodes itself, so parts may differ in checks and stored type.
 function Base.cat(A1::CDFVariable, As::CDFVariable...; dims)
     parts = (A1, As...)
-    return CDFVariable(_concat(parts, dims), CDM.name(A1), CDFDataset(collect(map(dataset, parts))), CDM.attrib(A1), nothing)
+    return CDFVariable(_concat(parts, dims), SDM.name(A1), CDFDataset(collect(map(dataset, parts))), A1.attrib, nothing)
 end

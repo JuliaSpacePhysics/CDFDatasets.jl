@@ -1,11 +1,11 @@
 function show_var_names(io::IO, indent, label, names)
     isempty(names) && return
-    printstyled(io, indent, label; color = CDM.section_color[])
+    printstyled(io, indent, label; color = :red)
     printstyled(io, join(names, ", "), "\n"; bold = true)
     return
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ds::AbstractCDFDataset)
+function Base.show(io::IO, ::MIME"text/plain", ds::CDFDataset)
     return _show(io, ds)
 end
 
@@ -14,15 +14,15 @@ function Base.show(io::IO, var::AbstractCDFVariable)
     level = get(io, :level, 0)
     indent = " "^level
     delim = " × "
-    printstyled(io, indent, CDM.name(var); color = CDM.variable_color[])
+    printstyled(io, indent, SDM.name(var); color = :green)
     print(io, " (", join(size(var), delim), ")\n")
     print(io, indent, "  Datatype:    ")
     printstyled(io, eltype(var); bold = true)
-    print(io, "\n", indent, "  Dimensions:  ", join(something.(CDM.dimnames(var), "?"), delim), "\n")
-    attrs = CDM.attrib(var)
+    print(io, "\n", indent, "  Dimensions:  ", join(something.(dimnames(var), "?"), delim), "\n")
+    attrs = var.attrib
     if !isempty(attrs)
         print(io, indent, "  Attributes:\n")
-        CDM.show_attrib(IOContext(io, :level => level + 3), attrs)
+        show_attrib(IOContext(io, :level => level + 3), attrs)
     end
     return
 end
@@ -32,13 +32,13 @@ function _show_limited(io::IO, var::AbstractCDFVariable)
     level = get(io, :level, 0)
     indent = " "^level
     delim = " × "
-    attrs = CDM.attrib(var)
+    attrs = var.attrib
     units = strip(get(attrs, "UNITS", ""))
     field = get(attrs, "CATDESC", get(attrs, "FIELDNAM", ""))
 
-    printstyled(io, indent, CDM.name(var), color = CDM.variable_color[])
+    printstyled(io, indent, SDM.name(var), color = :green)
     print(io, " (", join(size(var), delim), ")")
-    print(io, " dims=", join(something.(CDM.dimnames(var), "?"), delim))
+    print(io, " dims=", join(something.(dimnames(var), "?"), delim))
     if !isempty(field) || !isempty(units)
         print(io, " [")
         isempty(field) || print(io, field)
@@ -47,6 +47,16 @@ function _show_limited(io::IO, var::AbstractCDFVariable)
             print(io, units)
         end
         print(io, "]")
+    end
+    return
+end
+
+function show_attrib(io::IO, attrs)
+    indent = " "^get(io, :level, 0)
+    for (k, v) in attrs
+        print(io, indent, rpad(k, 20), " = ")
+        printstyled(io, v; color = :cyan)
+        print(io, "\n")
     end
     return
 end
@@ -66,14 +76,9 @@ function show_attrib_summary(io::IO, attrs)
     return
 end
 
-function _show(io::IO, ds::AbstractCDFDataset)
+function _show(io::IO, ds::CDFDataset)
     level = get(io, :level, 0)
     indent = " "^level
-
-    if !isopen(ds)
-        print(io, "closed Dataset")
-        return
-    end
 
     if ds isa CDFDataset && _has_interval(ds)
         print(io, indent, "View: ", ds.interval, "\n")
@@ -82,24 +87,18 @@ function _show(io::IO, ds::AbstractCDFDataset)
         print(io, indent, "Checks: ", ds.checks, "\n")
     end
     if ds isa CDFDataset && !isnothing(ds.master)
-        print(io, indent, "Master: ", CDM.path(ds.master), "\n")
+        print(io, indent, "Master: ", path(ds.master), "\n")
     end
 
-    printstyled(io, indent, "Dataset: ", CDM.path(ds), "\n", color = CDM.section_color[])
+    printstyled(io, indent, "Dataset: ", path(ds), "\n", color = :red)
 
-    print(io, indent, "Group: ", CDM.name(ds), "\n")
+    print(io, indent, "Group: ", SDM.name(ds), "\n")
     print(io, "\n")
-
-    # show dimensions
-    if length(dimnames(ds)) > 0
-        show_dim(io, dims(ds))
-        print(io, "\n")
-    end
 
     varnames = keys(ds)
 
     if length(varnames) > 0
-        printstyled(io, indent, "Data variables\n", color = CDM.section_color[])
+        printstyled(io, indent, "Data variables\n", color = :red)
 
         vars = [ds[name] for name in varnames]
         types = map(var_type, vars)
@@ -115,21 +114,22 @@ function _show(io::IO, ds::AbstractCDFDataset)
     end
 
     # global attribues
-    if length(CDM.attribnames(ds)) > 0
-        printstyled(io, indent, "Global attributes\n", color = CDM.section_color[])
+    attrs = ds.attrib
+    if !isempty(attrs)
+        printstyled(io, indent, "Global attributes\n", color = :red)
         attr_io = IOContext(io, :level => level + 2)
         if get(io, :limit, false)
-            show_attrib_summary(attr_io, CDM.attribs(ds))
+            show_attrib_summary(attr_io, attrs)
         else
-            CDM.show_attrib(attr_io, CDM.attribs(ds))
+            show_attrib(attr_io, attrs)
         end
     end
     return
 end
 
-function Base.show(io::IO, ds::AbstractCDFDataset)
-    varnames_list = CDM.varnames(ds)
-    dataset_name = CDM.name(ds)
+function Base.show(io::IO, ds::CDFDataset)
+    varnames_list = keys(ds)
+    dataset_name = SDM.name(ds)
     max_show = 12
     print(io, dataset_name, " (", length(varnames_list), " variable")
     length(varnames_list) != 1 && print(io, "s")

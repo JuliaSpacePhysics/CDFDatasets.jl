@@ -2,7 +2,6 @@ module CDFDatasetsDimensionalDataExt
 
 using CDFDatasets
 using CDFDatasets: AbstractCDFVariable, SDM
-import CommonDataModel as CDM
 using DimensionalData
 using DimensionalData.Lookups: NoLookup
 import DimensionalData: DimArray
@@ -19,14 +18,14 @@ function format_dim(data, i)
     c = SDM.dims(data, i)
     isnothing(c) && return DT(@something _labelkeys(data, i) NoLookup(axes(data, i)))
     ndims(c) == 1 || return DT(NoLookup(axes(data, i)))
-    return DT(vec(Array(c)); metadata = CDM.attrib(c))
+    return DT(vec(Array(c)); metadata = SDM.getmeta(c))
 end
 _labelkeys(data, i) = (l = CDFDatasets._labels(data, i); isnothing(l) ? nothing : parent(l))
 
 DimensionalData.dims(v::AbstractCDFVariable) = ntuple(i -> format_dim(v, i), ndims(v))
 
 DimensionalData.DimArray(v::AbstractCDFVariable; metadata = v.attrib) =
-    DimArray(Array(v), dims(v); name = CDM.name(v), metadata)
+    DimArray(Array(v), dims(v); name = SDM.name(v), metadata)
 
 # Workaround for https://github.com/rafaqz/DimensionalData.jl/pull/1250
 PrecompileTools.@compile_workload begin

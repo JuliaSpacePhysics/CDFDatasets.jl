@@ -17,7 +17,7 @@ dimension; a record-varying one keeps its records.
 function SDM.dims(var::CDFVariable, i::Integer)
     # A DEPEND that is the `LABL_PTR_i` variable itself holds labels, not values.
     c = depend(var, i)
-    (isnothing(c) || CDM.name(c) == get(CDM.attrib(var), "LABL_PTR_$(_storeddim(var, i))", nothing)) && return nothing
+    (isnothing(c) || SDM.name(c) == get(var.attrib, "LABL_PTR_$(_storeddim(var, i))", nothing)) && return nothing
     _isrecorddim(var, i) || is_record_varying(c) || (c = _droprecord(c))
     return _fits(c, var, i) ? c : nothing
 end
@@ -26,7 +26,7 @@ end
 # finds them. Dangling pointers exist in the wild (e.g. IM_K0_EUV); ISTP writers pad labels with spaces to the CHAR width.
 function _labels(var::CDFVariable, i::Integer)
     s = _storeddim(var, i)
-    p = get(CDM.attrib(var), "LABL_PTR_$s", nothing)
+    p = get(var.attrib, "LABL_PTR_$s", nothing)
     p isa AbstractString || return nothing
     source = _source(dataset(var), String(p))
     isnothing(source) && return nothing
@@ -38,14 +38,13 @@ function _labels(var::CDFVariable, i::Integer)
         l = l[inds[s]]
     end
     eltype(l) <: AbstractString && length(l) == size(var, i) || return nothing
-    return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = CDM.attrib(lv), name = p)
+    return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = lv.attrib, name = p)
 end
 
 # Labels along dimension `i`, which slicing keeps aligned with it.
 SDM.coords(var::CDFVariable) = [(i,) => l for i in 1:ndims(var) for l in (_labels(var, i),) if !isnothing(l)]
 
-SDM.name(var::CDFVariable) = CDM.name(var)
-SDM.getmeta(var::CDFVariable) = CDM.attrib(var)
+SDM.getmeta(var::CDFVariable) = var.attrib
 
 SDM.DataVariable(var::CDFVariable) = _datavariable(var, Array(var))
 
@@ -55,9 +54,9 @@ function _datavariable(var::CDFVariable, data; read = Returns(true))
     # unread times are a placeholder for those `rebuild` gives
     return SDM.DataVariable(data; time = isnothing(t) ? nothing : t => (read(t) ? coord(t) : axes(var, t)),
         dims = [i => coord(i) for i in 1:ndims(var) if i != t],
-        coords = [axs => _coordvar(c) for (axs, c) in SDM.coords(var)], metadata = CDM.attrib(var), name = CDM.name(var))
+        coords = [axs => _coordvar(c) for (axs, c) in SDM.coords(var)], metadata = var.attrib, name = SDM.name(var))
 end
-_coordvar(c::CDFVariable) = SDM.DataVariable(Array(c); metadata = CDM.attrib(c), name = CDM.name(c))
+_coordvar(c::CDFVariable) = SDM.DataVariable(Array(c); metadata = c.attrib, name = SDM.name(c))
 _coordvar(c) = c
 
 # A CDFVariable cannot hold new coordinates, so results are `DataVariable`s. 

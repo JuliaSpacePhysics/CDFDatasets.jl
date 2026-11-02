@@ -24,7 +24,7 @@ struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M <: Union{Noth
     data::A
     name::S
     parentdataset::P
-    metadata::MD
+    attrib::MD
     mask::M
     function CDFVariable{T}(data::AbstractArray{<:Any, N}, name, parentdataset, metadata, mask) where {T, N}
         return new{T, N, typeof(data), typeof(name), typeof(parentdataset), typeof(metadata), typeof(mask)}(data, name, parentdataset, metadata, mask)
@@ -48,14 +48,11 @@ function CDFVariable(data, name, parentdataset, metadata; fillval = FromAttrib()
     return CDFVariable(data, name, parentdataset, metadata, mask)
 end
 
-Base.getproperty(var::CDFVariable, s::Symbol) = s === :attrib ? CDM.attrib(var) : getfield(var, s)
-Base.propertynames(var::CDFVariable, private::Bool = false) = (fieldnames(CDFVariable)..., :attrib)
-
 Base.parent(var::CDFVariable) = getfield(var, :data)
 _mask(var::CDFVariable) = getfield(var, :mask)
 Base.size(var::CDFVariable) = size(parent(var))
 
-rebuild(var::CDFVariable{T}, data, mask = _mask(var)) where {T} = CDFVariable{T}(data, CDM.name(var), getfield(var, :parentdataset), CDM.attrib(var), mask)
+rebuild(var::CDFVariable{T}, data, mask = _mask(var)) where {T} = CDFVariable{T}(data, SDM.name(var), getfield(var, :parentdataset), var.attrib, mask)
 
 function Base.view(var::CDFVariable, I...)
     m = _mask(var)
@@ -88,12 +85,8 @@ function _readmasked!(data, aout, m, inds)
     return aout
 end
 
-CDM.name(var::CDFVariable) = getfield(var, :name)
-CDM.dataset(var::CDFVariable) = getfield(var, :parentdataset)
-CDM.attribnames(var::CDFVariable) = keys(CDM.attrib(var))
-CDM.attrib(var::CDFVariable) = getfield(var, :metadata)
-CDM.attrib(var::CDFVariable, name::String) = CDM.attrib(var)[name]
-CDM.variable(var::CDFVariable, name::String) = variable(dataset(var), name)
+SDM.name(var::CDFVariable) = getfield(var, :name)
+dataset(var::CDFVariable) = getfield(var, :parentdataset)
 
 # File variable backing `var`, through storage wrappers.
 _filevar(var::CDFVariable) = _filevar(parent(var))
@@ -101,12 +94,12 @@ _filevar(data) = data
 _filevar(data::FileArray) = data.var
 _filevar(data::SubArray) = _filevar(parent(data))
 
-function CDM.dimnames(var::CDFVariable, i::Int)
-    d = get(CDM.attrib(var), _isrecorddim(var, i) ? "DEPEND_0" : "DEPEND_$(_storeddim(var, i))", nothing)
+function dimnames(var::CDFVariable, i::Int)
+    d = get(var.attrib, _isrecorddim(var, i) ? "DEPEND_0" : "DEPEND_$(_storeddim(var, i))", nothing)
     return d isa AbstractString ? String(d) : nothing
 end
 
-CDM.dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
+dimnames(var::CDFVariable) = ntuple(i -> dimnames(var, i), ndims(var))
 
 is_virtual(var) = get(var.attrib, "VIRTUAL", nothing) == "TRUE"
 
@@ -115,8 +108,8 @@ function dimvarname(var::CDFVariable, i::Int)
     dname = dimnames(var, i)
     # Some CDAWeb masters name a DEPEND missing from the file (`po_h1_tim` `Start_epoch`).
     (isnothing(dname) || !haskey(dataset(var), dname)) && return nothing
-    swap = _isrecorddim(var, i) && "DEPEND_TIME" in attribnames(var) && is_virtual(dataset(var)[dname])
-    return swap ? attrib(var, "DEPEND_TIME") : dname
+    swap = _isrecorddim(var, i) && haskey(var.attrib, "DEPEND_TIME") && is_virtual(dataset(var)[dname])
+    return swap ? var.attrib["DEPEND_TIME"] : dname
 end
 
 """
@@ -165,8 +158,6 @@ function depend(var::CDFVariable{T, N, <:SubArray}, i::Int) where {T, N}
     return view(dvar, inds[s], ntuple(_ -> :, ndims(dvar) - 1)...)
 end
 
-CDM.dim(var::CDFVariable, i::Int) = @something depend(var, i) axes(parent(var), i)
-
 cdf_type(var::CDF.CDFVariable) = var.datatype
 cdf_type(var::CDFVariable) = cdf_type(_filevar(var))
 CDF.is_record_varying(var::CDFVariable) = is_record_varying(_filevar(var))
@@ -174,8 +165,8 @@ CDF.is_record_varying(var::CDFVariable) = is_record_varying(_filevar(var))
 # https://github.com/JuliaSpacePhysics/CDFDatasets.jl/issues/23
 function depend_time(var)
     @debug "Non compliant CDF file, swapping DEPEND_0 with DEPEND_TIME"
-    dimvar = dataset(var)[attrib(var, "DEPEND_TIME")]
-    return CDFVariable(Mapped(unix2timestamp, parent(dimvar)), CDM.name(dimvar), dataset(dimvar), CDM.attrib(dimvar))
+    dimvar = dataset(var)[var.attrib["DEPEND_TIME"]]
+    return CDFVariable(Mapped(unix2timestamp, parent(dimvar)), SDM.name(dimvar), dataset(dimvar), dimvar.attrib)
 end
 
 # Lazy `f.(parent)`

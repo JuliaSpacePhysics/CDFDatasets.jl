@@ -2,7 +2,6 @@ using CDFDatasets
 using CDFDatasets: var_type, cdf_type
 using Test
 import CDFDatasets as CDF
-import CDFDatasets.CommonDataModel as CDM
 using Dates
 using DimensionalData
 using Chairmarks
@@ -28,14 +27,14 @@ end
     tha_state_url = "https://github.com/JuliaSpacePhysics/CDFDatasets.jl/releases/download/v0.1.8/tha_l1_state_20100225_v03.cdf"
     ds = cdfopen(download_test_data(tha_state_url))
     var = ds["tha_pos"]
-    tdim = CDM.dim(var, 2)
+    tdim = CDF.depend(var, 2)
     @test tdim isa CDFVariable
     @test eltype(tdim) <: Dates.AbstractDateTime
     @test CDFDatasets.unix2timestamp(1.267056060123e9) == DateTime(2010, 2, 25, 0, 1, 0, 123)
     # subview keeps the swapped DEPEND_TIME coordinate
     t = Array(tdim)
     subvar = var[t[10] .. t[20]]
-    @test Array(CDM.dim(subvar, 2)) == t[10:20]
+    @test Array(CDF.depend(subvar, 2)) == t[10:20]
     @test SDM.tdimnum(var) == 2
     @test SDM.times(subvar) == t[10:20]
 end
@@ -51,7 +50,7 @@ end
     @test var.data == vcat(var1.data, var2.data)
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
-    @test CDM.dimnames(var) == CDM.dimnames(var1)
+    @test CDF.dimnames(var) == CDF.dimnames(var1)
     @test SDM.times(SDM.DataVariable(var)) == vcat(SDM.times(var1), SDM.times(var2))
 
     empty = CDFVariable(Float32[], "e", nothing, Dict())
@@ -73,11 +72,10 @@ end
     ds1 = CDFDataset(files[1])
     concat_ds = cdfopen(files)
 
-    @test CDM.varnames(concat_ds) == CDM.varnames(ds1)
-    @test CDM.attribnames(concat_ds) == CDM.attribnames(ds1)
+    @test keys(concat_ds) == keys(ds1)
+    @test keys(concat_ds.attrib) == keys(ds1.attrib)
     var = concat_ds["V"]
     @test size(var) == (1464,)
-    @test CDM.variable(var, "V") == var
     @test CDF.is_record_varying(var) == true
 
 
@@ -132,36 +130,33 @@ end
     ds = cdfopen(elx_file)
     @testset "Basic CDF Reading" begin
         @test CDF.data_version(ds) == v"1"
-        @test CDM.name(ds) == "elb_l2_epdef"
+        @test SDM.name(ds) == "elb_l2_epdef"
 
         # Test getting variable names
         @test keys(ds) isa Vector{String}
         @test length(keys(ds)) > 0
 
         # Test getting attribute names
-        attributes = CDM.attribnames(ds)
-        @test isa(attributes, Vector{String})
-        @test length(attributes) > 0
-        @test length(ds.attrib) == length(attributes)
+        attributes = collect(ds.attrib)
+        @test length(attributes) == length(ds.attrib) > 0
+        @test first(attributes) == ("Project" => ds.attrib["Project"])  # file order
 
         var = ds["elb_pef_hs_time"]
         @test var isa CDFVariable
         @test cdf_type(var) == CDF.CommonDataFormat.CDF_TIME_TT2000
         @test var_type(var) == "support_data"
-        @test length(var.attrib) == length(CDM.attribnames(var))
 
         @test depend(ds["elb_pef_hs_time"], 1) === nothing
-        @test CDM.dim(ds["elb_pef_hs_time"], 1) == axes(ds["elb_pef_hs_time"], 1)
-        @test CDM.dimnames(ds["elb_pef_hs_time"]) == (nothing,)
+        @test CDF.dimnames(ds["elb_pef_hs_time"]) == (nothing,)
 
         @test ndims(ds["elb_pef_hs_epa_spec"]) == 2
-        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 2) == ds["elb_pef_hs_time"]
-        @test CDM.dim(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_energies_mean"]
+        @test CDF.depend(ds["elb_pef_hs_epa_spec"], 2) == ds["elb_pef_hs_time"]
+        @test CDF.depend(ds["elb_pef_hs_epa_spec"], 1) == ds["elb_pef_energies_mean"]
 
         @test ndims(ds["elb_pef_hs_Epat_eflux"]) == 3
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
-        @test isequal(CDM.dim(ds["elb_pef_hs_Epat_eflux"], 1), ds["elb_pef_hs_epa_spec"])
-        @test CDM.dim(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
+        @test CDF.depend(ds["elb_pef_hs_Epat_eflux"], 3) == ds["elb_pef_hs_time"]
+        @test isequal(CDF.depend(ds["elb_pef_hs_Epat_eflux"], 1), ds["elb_pef_hs_epa_spec"])
+        @test CDF.depend(ds["elb_pef_hs_Epat_eflux"], 2) == ds["elb_pef_energies_mean"]
         @test is_record_varying(ds["elb_pef_hs_Epat_eflux"]) == true
         @test is_record_varying(ds["elb_pef_hs_epa_spec"]) == true
         @test is_record_varying(ds["elb_pef_energies_mean"]) == false
@@ -174,8 +169,8 @@ end
         var = ds["elb_pef_hs_Epat_eflux"]
         subvar = var[t0 .. t1]
         @test size(subvar) == (10, 16, 22)
-        @test size(CDM.dim(subvar, 1)) == (10, 22)
-        @test size(CDM.dim(subvar, 2)) == (16, 1)
+        @test size(CDF.depend(subvar, 1)) == (10, 22)
+        @test size(CDF.depend(subvar, 2)) == (16, 1)
     end
 
     @testset "decoding on read" begin
@@ -230,7 +225,7 @@ end
         stored = Array(parent(ds["elb_pef_hs_Epat_eflux"]))
         @test isequal(Array(unbounded["elb_pef_hs_Epat_eflux"]), stored)
         @test isequal(Array(variable(unbounded, "elb_pef_hs_Epat_eflux"; validmax = 1.0f6)), Array(ds["elb_pef_hs_Epat_eflux"]))
-        @test isequal(Array(CDM.dim(unbounded["elb_pef_hs_Epat_eflux"], 1)), Array(parent(ds["elb_pef_hs_epa_spec"])))
+        @test isequal(Array(CDF.depend(unbounded["elb_pef_hs_Epat_eflux"], 1)), Array(parent(ds["elb_pef_hs_epa_spec"])))
         t0, t1 = DateTime("2021-09-14T16:23:44"), DateTime("2021-09-14T16:27:36")
         clipped = view(unbounded, t0 .. t1)["elb_pef_hs_Epat_eflux"]
         @test isequal(Array(clipped), Array(parent(view(ds, t0 .. t1)["elb_pef_hs_Epat_eflux"])))
@@ -317,8 +312,9 @@ end
 
 @testset "DEPEND from metadata" begin
     ds = cdfopen(data_path("labl_ptr.cdf"))
-    @test CDM.dimnames(CDM.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "labels")), 1) == "labels"
-    @test isnothing(SDM.dims(CDM.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "flux_energy")), 1))
+    @test SDM.name(ds[:flux]) == "flux"
+    @test CDF.dimnames(CDF.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "labels")), 1) == "labels"
+    @test isnothing(SDM.dims(CDF.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "flux_energy")), 1))
 end
 
 @testset "Attributes from a master" begin
