@@ -21,7 +21,7 @@ DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 CDFDatasetsDimensionalDataExt = "DimensionalData"
 
 [compat]
-CommonDataFormat = "0.6"
+CommonDataFormat = "0.6.4"
 Dates = "1"
 DimensionalData = "0.29, 0.30"
 Durations = "1.4"

@@ -1,7 +1,7 @@
 module CDFDatasets
 
 using CommonDataFormat
-using CommonDataFormat: TT2000, Epoch, Epoch16
+using CommonDataFormat: TT2000, Epoch, Epoch16, _isdense
 using Dates: AbstractDateTime, DateTime, Nanosecond
 using Durations: Durations, Timestamp
 import CommonDataFormat as CDF

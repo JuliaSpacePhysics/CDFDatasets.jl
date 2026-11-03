@@ -28,7 +28,7 @@ function readregion!(a::ConcatArray{T, N}, dest, inds::Vararg{AbstractUnitRange,
         lo > hi && continue
         pinds = Base.setindex(inds, (lo - a.starts[k] + 1):(hi - a.starts[k] + 1), a.dim)
         dinds = Base.setindex(map(i -> 1:length(i), inds), (lo - first(r) + 1):(hi - first(r) + 1), a.dim)
-        copyto!(view(dest, dinds...), p[ntuple(d -> pinds[d], ndims(p))...])
+        readregion!(p, view(dest, dinds...), ntuple(d -> pinds[d], ndims(p))...)
     end
     return dest
 end
