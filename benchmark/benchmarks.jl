@@ -23,45 +23,55 @@ const OMNI_V = OMNI["V"]
 const OMNI_MULTI_V = OMNI_MULTI["V"]
 
 const ELFIN_FLUX = ELFIN["elb_pef_hs_Epat_eflux"]
-const ELFIN_SECTNUM = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
-const ELFIN_FLUX_INMEMORY = SDM.DataVariable(ELFIN_FLUX)
 
 const CLIP = DateTime(2020, 5, 3) .. DateTime(2020, 5, 4)
 const OMNI_MULTI_VIEW = view(OMNI_MULTI, CLIP)
 
-SUITE["variable"]["disk"]["sum"] = @benchmarkable sum($ELFIN_FLUX)
-SUITE["variable"]["disk"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX)
-SUITE["variable"]["disk"]["broadcast-realized"] = @benchmarkable Array($ELFIN_FLUX .* 2)
+let g = SUITE["variable"], dv = SDM.DataVariable(ELFIN_FLUX)
+    g["disk"]["sum"] = @benchmarkable sum($ELFIN_FLUX)
+    g["disk"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX)
+    g["disk"]["broadcast-realized"] = @benchmarkable Array($ELFIN_FLUX .* 2)
 
-SUITE["variable"]["in-memory"]["sum"] = @benchmarkable sum($ELFIN_FLUX_INMEMORY)
-SUITE["variable"]["in-memory"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX_INMEMORY)
-SUITE["variable"]["in-memory"]["broadcast"] = @benchmarkable $ELFIN_FLUX_INMEMORY .* 2
+    g["in-memory"]["sum"] = @benchmarkable sum($dv)
+    g["in-memory"]["maximum"] = @benchmarkable maximum($dv)
+    g["in-memory"]["broadcast"] = @benchmarkable $dv .* 2
 
-SUITE["variable"]["DataVariable"]["omni-v"] = @benchmarkable SDM.DataVariable($OMNI_V)
-SUITE["variable"]["DataVariable"]["elfin-flux"] = @benchmarkable SDM.DataVariable($ELFIN_FLUX)
+    g["DataVariable"]["omni-v"] = @benchmarkable SDM.DataVariable($OMNI_V)
+    g["DataVariable"]["elfin-flux"] = @benchmarkable SDM.DataVariable($ELFIN_FLUX)
+end
 
-SUITE["decode"]["float-3d"] = @benchmarkable Array($ELFIN_FLUX)
-SUITE["decode"]["float-3d-raw"] = @benchmarkable Array(parent($ELFIN_FLUX))
-SUITE["decode"]["int8"] = @benchmarkable Array($ELFIN_SECTNUM)
-SUITE["decode"]["omni-v"] = @benchmarkable Array($OMNI_V)
+let g = SUITE["decode"], sectnum = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
+    g["float-3d"] = @benchmarkable Array($ELFIN_FLUX)
+    g["float-3d-raw"] = @benchmarkable Array(parent($ELFIN_FLUX))
+    g["int8"] = @benchmarkable Array($sectnum)
+    g["omni-v"] = @benchmarkable Array($OMNI_V)
 
-SUITE["decode"]["lookup"]["float-3d"] = @benchmarkable Array($ELFIN["elb_pef_hs_Epat_eflux"])
-SUITE["decode"]["lookup"]["int8"] = @benchmarkable Array($ELFIN["elb_pef_sectnum"])
-SUITE["decode"]["lookup"]["omni-v"] = @benchmarkable Array($OMNI["V"])
-SUITE["decode"]["lookup"]["concat"] = @benchmarkable Array($OMNI_MULTI["V"])
+    g["lookup"]["float-3d"] = @benchmarkable Array($ELFIN["elb_pef_hs_Epat_eflux"])
+    g["lookup"]["int8"] = @benchmarkable Array($ELFIN["elb_pef_sectnum"])
+    g["lookup"]["omni-v"] = @benchmarkable Array($OMNI["V"])
+    g["lookup"]["concat"] = @benchmarkable Array($OMNI_MULTI["V"])
+end
 
-SUITE["concat"]["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
-SUITE["concat"]["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
-SUITE["concat"]["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]
-SUITE["concat"]["dataset"]["epoch"] = @benchmarkable $OMNI_MULTI["Epoch"]
+let g = SUITE["concat"]
+    g["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
+    g["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
+    g["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]
+    g["dataset"]["epoch"] = @benchmarkable $OMNI_MULTI["Epoch"]
+end
 
-SUITE["clip"]["variable"] = @benchmarkable $OMNI_MULTI_V[$CLIP]
-SUITE["clip"]["dataset-variable"] = @benchmarkable $OMNI_MULTI_VIEW["V"]
-SUITE["clip"]["dataset-epoch"] = @benchmarkable Array($OMNI_MULTI_VIEW["Epoch"])
+let g = SUITE["clip"]
+    g["variable"] = @benchmarkable $OMNI_MULTI_V[$CLIP]
+    g["dataset-variable"] = @benchmarkable $OMNI_MULTI_VIEW["V"]
+    g["dataset-epoch"] = @benchmarkable Array($OMNI_MULTI_VIEW["Epoch"])
+end
 
-SUITE["dimarray"]["single"] = @benchmarkable DimArray($OMNI_V)
-SUITE["dimarray"]["concat"] = @benchmarkable DimArray($OMNI_MULTI_V)
-SUITE["dimarray"]["clip"] = @benchmarkable DimArray($OMNI_MULTI_VIEW["V"])
+let g = SUITE["dimarray"]
+    g["single"] = @benchmarkable DimArray($OMNI_V)
+    g["concat"] = @benchmarkable DimArray($OMNI_MULTI_V)
+    g["clip"] = @benchmarkable DimArray($OMNI_MULTI_VIEW["V"])
+end
 
-SUITE["metadata"]["depend"] = @benchmarkable CDFDatasets.depend($OMNI_MULTI_V, 1)
-SUITE["metadata"]["dataset"] = @benchmarkable CDFDatasets.dataset($OMNI_MULTI_V)
+let g = SUITE["metadata"]
+    g["depend"] = @benchmarkable CDFDatasets.depend($OMNI_MULTI_V, 1)
+    g["dataset"] = @benchmarkable CDFDatasets.dataset($OMNI_MULTI_V)
+end
