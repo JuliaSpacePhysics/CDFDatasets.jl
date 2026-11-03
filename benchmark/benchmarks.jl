@@ -52,9 +52,10 @@ let g = SUITE["decode"], sectnum = ELFIN["elb_pef_sectnum"]  # Int8, promoted to
     g["lookup"]["concat"] = @benchmarkable Array($OMNI_MULTI["V"])
 end
 
-let g = SUITE["concat"]
+let g = SUITE["concat"], cat_v = cat(OMNI_V, cdfopen(OMNI_FILES[2])["V"]; dims = 1)  # parts mask themselves
     g["variable"]["construct"] = @benchmarkable cat($OMNI_V, $OMNI["V"]; dims = 1)
     g["variable"]["array"] = @benchmarkable Array($OMNI_MULTI_V)
+    g["variable"]["cat-array"] = @benchmarkable Array($cat_v)
     g["dataset"]["variable"] = @benchmarkable $OMNI_MULTI["V"]
     g["dataset"]["epoch"] = @benchmarkable $OMNI_MULTI["Epoch"]
 end
