@@ -84,12 +84,6 @@ end
 SDM.name(var::CDFVariable) = var.name
 dataset(var::CDFVariable) = var.parentdataset
 
-# File variable backing `var`, through storage wrappers.
-_filevar(var::CDFVariable) = _filevar(parent(var))
-_filevar(data) = data
-_filevar(data::FileArray) = data.var
-_filevar(data::SubArray) = _filevar(parent(data))
-
 function dimnames(var::CDFVariable, i::Int)
     d = get(var.attrib, _isrecorddim(var, i) ? "DEPEND_0" : "DEPEND_$(_storeddim(var, i))", nothing)
     return d isa AbstractString ? String(d) : nothing
@@ -125,9 +119,7 @@ end
 
 # Indices of a view into the stored variable (Base flattens nested views), whose integer
 # indices drop dimensions: attributes such as `DEPEND_i` number the stored dimensions.
-_viewindices(var::CDFVariable) = _viewindices(parent(var))
-_viewindices(data::SubArray) = parentindices(data)
-_viewindices(data) = nothing
+_viewindices(var::CDFVariable) = parent(var) isa SubArray ? parentindices(parent(var)) : nothing
 
 function _storeddim(var::CDFVariable, i)
     inds = _viewindices(var)
@@ -176,13 +168,16 @@ end
 Mapped(f, p::AbstractArray) = Mapped{Base.promote_op(f, eltype(p)), ndims(p), typeof(f), typeof(p)}(f, p)
 Base.size(m::Mapped) = size(m.parent)
 Base.parent(m::Mapped) = m.parent
-_filevar(m::Mapped) = _filevar(parent(m))
 function readregion!(m::Mapped, dest, inds::AbstractUnitRange...)
     raw = Array{eltype(m.parent)}(undef, map(length, inds))
     readregion!(m.parent, raw, inds...)
     dest .= m.f.(raw)
     return dest
 end
+
+_filevar(data) = data
+_filevar(data::FileArray) = data.var
+_filevar(data::Union{CDFVariable, SubArray, Mapped}) = _filevar(parent(data))
 
 # Float64 Unix seconds resolve only ~0.2 µs today; rounding to µs recovers decimal values
 # that truncation to ns usually puts just below (e.g. .123 s -> .122999808 s).

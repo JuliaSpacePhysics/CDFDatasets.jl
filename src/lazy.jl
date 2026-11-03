@@ -56,6 +56,8 @@ function _getindex(a::AbstractArray{T,N}, J::Tuple) where {T,N}
         block = Array{T,N}(undef, map(length, box))
         readregion!(a, block, box...)
         all(i -> i isa Integer, J) && return block[1]
+        # `reshape` allocates a new header even when the shape is unchanged
+        all(i -> i isa AbstractUnitRange, J) && return block
         all(i -> i isa Union{Integer,AbstractUnitRange}, J) && return reshape(block, shape)
         return block[map((i, b) -> _shift(i, first(b) - 1), J, box)...]
     elseif length(J) == 1 && !(eltype(only(J)) <: CartesianIndex)  # linear indexing: the whole records it spans

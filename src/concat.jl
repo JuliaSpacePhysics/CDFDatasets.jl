@@ -28,17 +28,9 @@ function readregion!(a::ConcatArray{T, N}, dest, inds::Vararg{AbstractUnitRange,
         lo > hi && continue
         pinds = Base.setindex(inds, (lo - a.starts[k] + 1):(hi - a.starts[k] + 1), a.dim)
         dinds = Base.setindex(map(i -> 1:length(i), inds), (lo - first(r) + 1):(hi - first(r) + 1), a.dim)
-        copyto!(view(dest, dinds...), _readpart(p, pinds))
+        copyto!(view(dest, dinds...), p[ntuple(d -> pinds[d], ndims(p))...])
     end
     return dest
-end
-
-# A part may have fewer dimensions than the concatenation.
-function _readpart(p, inds)
-    pinds = ntuple(d -> inds[d], ndims(p))
-    block = Array{eltype(p)}(undef, map(length, pinds))
-    readregion!(p, block, pinds...)
-    return block
 end
 
 _filevar(data::ConcatArray) = _filevar(first(data.parents))
