@@ -372,6 +372,14 @@ end
     @test a[[CartesianIndex(3), CartesianIndex(1)], 2, 2] == data[[3, 1], 2, 2]
 end
 
+@testset "copyto! into strided arrays" begin
+    A = Float32.(reshape(1:3000, 3, 1000))
+    v = CDF.CDFVariable(A, "x", nothing, Dict{String, Any}())
+    dense = view(zeros(Float32, 3, 1001), :, 2:1001)
+    @test copyto!(dense, v) == A
+    @test (@allocated copyto!(dense, v)) < sizeof(A) ÷ 4
+end
+
 include("test_show.jl")
 
 @testset "find_indices" begin

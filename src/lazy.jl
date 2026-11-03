@@ -73,7 +73,7 @@ function _getindex(a::AbstractArray{T,N}, J::Tuple) where {T,N}
     end
 end
 
-function Base.copyto!(dest::Array, src::LazyLike)
+function Base.copyto!(dest::StridedArray, src::LazyLike)
     if size(dest) == size(src) && eltype(dest) === eltype(src)
         readregion!(src, dest, axes(src)...)
     else
