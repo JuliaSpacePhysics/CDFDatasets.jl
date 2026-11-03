@@ -118,7 +118,10 @@ dimension has no DEPEND.
 function depend(var::CDFVariable, i::Int)
     dname = dimvarname(var, i)
     isnothing(dname) && return nothing
-    return dname == dimnames(var, i) ? dataset(var)[dname] : depend_time(var)
+    c = dname == dimnames(var, i) ? dataset(var)[dname] : depend_time(var)
+    # A variable with no records written has none of its coordinate's
+    _isrecorddim(var, i) && size(var, ndims(var)) == 0 && return selectdim(c, ndims(c), 1:0)
+    return c
 end
 
 # Indices of a view into the stored variable (Base flattens nested views), whose integer

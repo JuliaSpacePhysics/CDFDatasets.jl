@@ -7,6 +7,12 @@ function SDM.tdimnum(var::CDFVariable)
     return eltype(_source(dataset(var), dname)[dname]) <: AbstractDateTime ? N : nothing
 end
 
+function _timecoord(var::CDFVariable)
+    eltype(var) <: AbstractDateTime && return var
+    N = SDM.tdimnum(var)
+    return isnothing(N) ? nothing : depend(var, N)
+end
+
 function find_indices(tdim::Vector, interval::Interval)
     if !issorted(tdim)
         idx = findall(in(interval), tdim)
@@ -22,15 +28,12 @@ end
 # `issorted` reads every element: once, not one read each.
 find_indices(tdim::AbstractVector, interval::Interval) = find_indices(Array(tdim), interval)
 
-function _getindex_interval(var::CDFVariable{T}, interval::Interval) where {T}
-    N = ndims(var)
-    T <: AbstractDateTime || !isnothing(SDM.tdimnum(var)) ||
+function Base.getindex(var::CDFVariable, interval::Interval)
+    tdim = _timecoord(var)
+    isnothing(tdim) &&
         throw(ArgumentError("Interval indexing requires a time coordinate (a DEPEND_0 of times); none found for $(SDM.name(var)); pass a `master` or `metadata` naming one"))
-    tdim = T <: AbstractDateTime ? var : depend(var, N)
-    return selectdim(var, N, find_indices(tdim, interval))
+    return selectdim(var, ndims(var), find_indices(tdim, interval))
 end
-
-Base.getindex(var::CDFVariable, interval::Interval) = _getindex_interval(var, interval)
 
 """
     SpaceDataModel.dims(var::CDFVariable, i)
