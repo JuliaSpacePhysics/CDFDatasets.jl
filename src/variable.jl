@@ -70,12 +70,15 @@ function readregion!(a::CDFVariable, aout, inds::AbstractUnitRange...)
 end
 
 function _readmasked!(data, aout, m, inds)
-    # The kernel runs on `Array`s only: on a view it would compile generic reshaped-view indexing.
-    # Float data is read straight into `aout` and masked in place.
+    # The kernel runs on `Array`s only: to avoid views without fast linear indexing and compiling per view type.
+    if !(aout isa Array) && _isdense(aout)
+        GC.@preserve aout _readmasked!(data, unsafe_wrap(Array, pointer(aout), size(aout)), m, inds)
+        return aout
+    end
     inplace = aout isa Array && eltype(aout) === eltype(data)
     raw = inplace ? aout : Array{eltype(data)}(undef, size(aout))
     readregion!(data, raw, inds...)
-    out = aout isa Array ? aout : similar(raw, eltype(aout))
+    out = aout isa Array ? aout : eltype(raw) === eltype(aout) ? raw : similar(raw, eltype(aout))
     SDM.mask_invalid!(out, raw, m[inds[1]], 1)
     out === aout || copyto!(aout, out)
     return aout
