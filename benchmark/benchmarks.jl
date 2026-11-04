@@ -29,11 +29,9 @@ const OMNI_MULTI_VIEW = view(OMNI_MULTI, CLIP)
 
 let g = SUITE["variable"], dv = SDM.DataVariable(ELFIN_FLUX)
     g["disk"]["sum"] = @benchmarkable sum($ELFIN_FLUX)
-    g["disk"]["maximum"] = @benchmarkable maximum($ELFIN_FLUX)
     g["disk"]["broadcast-realized"] = @benchmarkable Array($ELFIN_FLUX .* 2)
 
     g["in-memory"]["sum"] = @benchmarkable sum($dv)
-    g["in-memory"]["maximum"] = @benchmarkable maximum($dv)
     g["in-memory"]["broadcast"] = @benchmarkable $dv .* 2
 
     g["DataVariable"]["omni-v"] = @benchmarkable SDM.DataVariable($OMNI_V)
@@ -46,10 +44,14 @@ let g = SUITE["decode"], sectnum = ELFIN["elb_pef_sectnum"]  # Int8, promoted to
     g["int8"] = @benchmarkable Array($sectnum)
     g["omni-v"] = @benchmarkable Array($OMNI_V)
 
-    g["lookup"]["float-3d"] = @benchmarkable Array($ELFIN["elb_pef_hs_Epat_eflux"])
-    g["lookup"]["int8"] = @benchmarkable Array($ELFIN["elb_pef_sectnum"])
     g["lookup"]["omni-v"] = @benchmarkable Array($OMNI["V"])
-    g["lookup"]["concat"] = @benchmarkable Array($OMNI_MULTI["V"])
+end
+
+let g = SUITE["copyto"], flux = ELFIN["elb_pef_Et_nflux"], sectnum = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
+    buf = zeros(Float32, size(flux))
+    g["variable"] = @benchmarkable copyto!($(view(buf, :, 1:size(flux, 2))), $flux)
+    g["view"] = @benchmarkable copyto!($(view(buf, :, 1:2)), $(view(flux, :, 1:2)))
+    g["decoded"] = @benchmarkable copyto!($(view(zeros(Float32, length(sectnum)), 1:length(sectnum))), $sectnum)
 end
 
 let g = SUITE["concat"], cat_v = cat(OMNI_V, cdfopen(OMNI_FILES[2])["V"]; dims = 1)  # parts mask themselves
