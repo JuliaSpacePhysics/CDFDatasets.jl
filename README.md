@@ -27,9 +27,9 @@ Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX
 
 ```julia
 var = ds["BR"]                                                      # lazy: nothing read yet
-Array(var)                                                          # reads and decodes; `var[i]` reads part
+Array(var)                                                          # reads and decodes; `var[i]` and `copyto!(view(buf, :, 1:10), view(var, :, 11:20))` reads part
 parent(var)                                                         # stored on-disk data, undecoded
-variable(ds, "BR"; validmax = nothing)                              # one variable: override `fillval`/`validmin`/`validmax`; `nothing` disables
+variable(ds, "BR"; validmax = nothing)                              # to override `fillval`/`validmin`/`validmax`; `nothing` disables
 cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
 cdfopen(file; master = path)                                        # master CDF's variable attributes and non-record-varying variables override the file's; its global attributes fill the file's gaps
 ```

@@ -24,5 +24,9 @@ PrecompileTools.@setup_workload begin
             view(ds, DateTime(2021, 9, 14) .. DateTime(2021, 9, 15))["elb_pef_Et_nflux"][:, :]
         end
         Array(view(cdfopen(elb)["elb_pef_hs_Epat_eflux"], :, :, 1:2))
+        let flux = cdfopen(elb)["elb_pef_Et_nflux"], buf = zeros(Float32, size(flux))
+            copyto!(view(buf, :, 1:2), view(flux, :, 1:2))
+            copyto!(view(buf, :, 1:size(flux, 2)), flux)
+        end
     end
 end
