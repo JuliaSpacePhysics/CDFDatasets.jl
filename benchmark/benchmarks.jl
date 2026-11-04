@@ -49,8 +49,9 @@ end
 
 let g = SUITE["copyto"], flux = ELFIN["elb_pef_Et_nflux"], sectnum = ELFIN["elb_pef_sectnum"]  # Int8, promoted to Float32
     buf = zeros(Float32, size(flux))
+    half = 1:(size(flux, 2) ÷ 2)
     g["variable"] = @benchmarkable copyto!($(view(buf, :, 1:size(flux, 2))), $flux)
-    g["view"] = @benchmarkable copyto!($(view(buf, :, 1:2)), $(view(flux, :, 1:2)))
+    g["view"] = @benchmarkable copyto!($(view(buf, :, half)), $(view(flux, :, half)))
     g["decoded"] = @benchmarkable copyto!($(view(zeros(Float32, length(sectnum)), 1:length(sectnum))), $sectnum)
 end
 
