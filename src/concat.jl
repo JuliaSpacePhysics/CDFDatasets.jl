@@ -1,4 +1,4 @@
-# Lazy concatenation  along dimension `dim`, which starts part `k` at index `starts[k]`.
+# Lazy concatenation along dimension `dim`, which starts part `k` at index `starts[k]`.
 struct ConcatArray{T, N, P <: AbstractVector} <: AbstractLazyArray{T, N}
     parents::P
     dim::Int
@@ -23,11 +23,16 @@ end
 
 function readregion!(a::ConcatArray{T, N}, dest, inds::Vararg{AbstractUnitRange, N}) where {T, N}
     r = inds[a.dim]
-    for (k, p) in enumerate(a.parents)
+    isempty(r) && return dest
+    destaxes = map(i -> 1:length(i), inds)
+    k0 = first(r) == 1 ? 1 : searchsortedlast(a.starts, first(r))
+    for k in k0:length(a.parents)
+        a.starts[k] > last(r) && break
+        p = a.parents[k]
         lo, hi = max(first(r), a.starts[k]), min(last(r), a.starts[k + 1] - 1)
         lo > hi && continue
         pinds = Base.setindex(inds, (lo - a.starts[k] + 1):(hi - a.starts[k] + 1), a.dim)
-        dinds = Base.setindex(map(i -> 1:length(i), inds), (lo - first(r) + 1):(hi - first(r) + 1), a.dim)
+        dinds = Base.setindex(destaxes, (lo - first(r) + 1):(hi - first(r) + 1), a.dim)
         readregion!(p, view(dest, dinds...), ntuple(d -> pinds[d], ndims(p))...)
     end
     return dest

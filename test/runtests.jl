@@ -44,9 +44,7 @@ end
     var1 = CDFDataset(file1)["V"]
     var2 = CDFDataset(file2)["V"]
     var = cat(var1, var2; dims = 1)
-    @test var == cat(var1, var2; dims = 1)
-    @test var.data.parents[1] === var1
-    @test var.data == vcat(var1.data, var2.data)
+    @test isequal(Array(var), vcat(Array(var1), Array(var2)))
     @test DimArray(var).dims[1] == vcat(DimArray(var1).dims[1], DimArray(var2).dims[1])
     @test var.attrib == var1.attrib
     @test CDF.dimnames(var) == CDF.dimnames(var1)
@@ -54,14 +52,16 @@ end
 
     empty = CDFVariable(Float32[], "e", nothing, Dict())
     @test isempty(Array(cat(empty, empty; dims = 1)))
-    padded = cat(empty, var1, empty; dims = 1)
-    @test size(padded) == size(var1)
-    @test isequal(padded[:], var1[:])
+    padded = cat(empty, var1, empty, var2, empty; dims = 1)
+    boundary = length(var1)
+    @test isequal(padded[:], var[:])
+    @test isequal(padded[boundary:(boundary + 1)], [var1[end], var2[1]])
 
     # views read through the parts, across their boundary
     e = CDFDataset(data_path("elb_l2_epdef_20210914_v01.cdf"))["elb_pef_hs_Epat_eflux"]
     e2 = cat(e, e; dims = 3)
-    @test isequal(Array(view(e2, 2, :, 40:50)), Array(e2)[2, :, 40:50])
+    n = size(e, 3)
+    @test isequal(Array(view(e2, 2, :, n:(n + 1))), hcat(e[2, :, end], e[2, :, 1]))
 end
 
 @testset "Multi-file CDFDataset" begin

@@ -13,13 +13,14 @@ A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) d
 using Pkg; Pkg.add("CDFDatasets")
 using CDFDatasets
 
-ds = cdfopen("data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf")
+ds = cdfopen(joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
 times = ds["Epoch"]
-bx = ds["BR"]
-ds = cdfopen(files, t0, t1)  # files concatenated along records; variables with a time coordinate restricted to [t0, t1)
+br = ds["BR"]
 ```
 
 `keys(ds)` lists variables; `ds.attrib` and `var.attrib` are attribute dictionaries; `depend(var, i)` is the `DEPEND_i` coordinate variable, or `nothing`.
+
+`cdfopen(files)` lazily concatenates records in file order. `cdfopen(files, t0, t1)` clips variables with a time coordinate to `[t0, t1)`.
 
 ## Missing values
 
@@ -40,12 +41,4 @@ cdfopen(file; varattrib = Dict(name => Dict("FILLVAL" => nothing)))  # skip fill
 `CDFVariable`s implement the [SpaceDataModel](https://github.com/JuliaSpacePhysics/SpaceDataModel.jl) / [TimeseriesUtilities](https://github.com/JuliaSpacePhysics/TimeseriesUtilities.jl) container interface: `times(var)`, `dims(var, i)` (the `DEPEND_i` coordinate, a lazy `CDFVariable` with its attributes), and operations such as `tmean(var, Minute(5)) :: DataVariable`.
 
 - `DataVariable(var)` reads it into memory whose indexing keeps the time dimension, sliced coordinates and attributes; `DataVariable(view(var, :, 1:10))` reads part.
-- `LABL_PTR_i` labels, trailing space padding stripped, are a further coordinate along dimension `i` (`SpaceDataModel.coords`); `var.attrib["LABL_PTR_i"]` is the stored name of the labels variable. `DimArray(var)` takes labels as the lookup of a dimension without `DEPEND_i`.
-
-## Features
-
-It provides a high-level interface with features:
-
-- Concatenation of multiple CDF files;
-- Integration with [`DimensionalData.jl`](https://github.com/rafaqz/DimensionalData.jl).
-
+- `LABL_PTR_i` labels, trailing space padding stripped, are a further coordinate along dimension `i` (`SpaceDataModel.coords`); `var.attrib["LABL_PTR_i"]` is the stored name of the labels variable. [DimensionalData.jl](https://github.com/rafaqz/DimensionalData.jl) uses these labels in `DimArray(var)` as the lookup of a dimension without `DEPEND_i`.
