@@ -23,14 +23,14 @@ ds = cdfopen(files, t0, t1)  # files concatenated along records; variables with 
 
 ## Missing values
 
-Reads return `NaN` for values equal to `FILLVAL` or outside `VALIDMIN`/`VALIDMAX` (per component), so masked integer variables read as floats; integer `support_data`/`metadata` variables (flags, status codes) read as stored.
+Reads return `NaN` for values equal to `FILLVAL`, so integer `data` variables with a `FILLVAL` read as floats; integer `support_data`/`metadata` (flags, status codes) read as stored. `VALIDMIN`/`VALIDMAX` (per component) are opt-in.
 
 ```julia
 var = ds["BR"]                                                      # lazy: nothing read yet
 Array(var)                                                          # reads and decodes; `var[i]` and `copyto!(view(buf, :, 1:10), view(var, :, 11:20))` reads part
 parent(var)                                                         # stored on-disk data, undecoded
-variable(ds, "BR"; validmax = nothing)                              # to override `fillval`/`validmin`/`validmax`; `nothing` disables
-cdfopen(file; checks = (; validmin = nothing, validmax = nothing))  # every variable, its coordinates and views (e.g. placeholder bounds)
+variable(ds, "BR"; validmin = true, validmax = 100)                 # `true` uses the attribute, `nothing` disables, a value overrides it
+cdfopen(file; checks = (; validmin = true, validmax = true))        # dataset-wide `variable` keywords
 cdfopen(file; master = path)                                        # master CDF's variable attributes and non-record-varying variables override the file's; its global attributes fill the file's gaps
 ```
 
