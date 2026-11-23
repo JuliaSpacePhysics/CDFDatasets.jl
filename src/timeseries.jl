@@ -66,7 +66,7 @@ function _labels(var::CDFVariable, i::Integer)
         l = l[inds[s]]
     end
     eltype(l) <: AbstractString && length(l) == size(var, i) || return nothing
-    return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = lv.attrib, name = p)
+    return SDM.DataVariable(map(s -> String(rstrip(s)), l); metadata = _varattrib(dataset(var), p, lv), name = p)
 end
 
 # Labels along dimension `i`, which slicing keeps aligned with it.

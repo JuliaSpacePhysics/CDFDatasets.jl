@@ -32,6 +32,7 @@ parent(var)                                                         # stored on-
 variable(ds, "BR"; validmin = true, validmax = 100)                 # `true` uses the attribute, `nothing` disables, a value overrides it
 cdfopen(file; checks = (; validmin = true, validmax = true))        # dataset-wide `variable` keywords
 cdfopen(file; master = path)                                        # master CDF's variable attributes and non-record-varying variables override the file's; its global attributes fill the file's gaps
+cdfopen(file; varattrib = Dict(name => Dict("FILLVAL" => nothing)))  # skip fill masking for this variable
 ```
 
 ## Time series

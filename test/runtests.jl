@@ -285,8 +285,9 @@ end
 
 @testset "LABL_PTR labels" begin
     labels(x) = SDM.ISTPSchema()(x, :labels)
-    ds = cdfopen(data_path("labl_ptr.cdf"))
+    ds = cdfopen(data_path("labl_ptr.cdf"); varattrib = Dict("labels" => Dict("CATDESC" => "Axes")))
     @test labels(ds["ok"]) == ["Bx", "By", "Bz"]
+    @test SDM.getmeta(last(only(SDM.coords(ds["ok"]))), "CATDESC") == "Axes"
     @test isnothing(SDM.dims(ds["ok"], 1))  # labels are not values
     @test labels(SDM.DataVariable(ds["ok"])[2:3, :]) == ["By", "Bz"]
     @test labels(view(ds["ok"], 2:3, :)) == ["By", "Bz"]
@@ -302,6 +303,8 @@ end
     @test SDM.name(ds[:flux]) == "flux"
     @test CDF.dimnames(CDF.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "labels")), 1) == "labels"
     @test isnothing(SDM.dims(CDF.variable(ds, "flux"; metadata = Dict("DEPEND_1" => "flux_energy")), 1))
+    ds = cdfopen(data_path("labl_ptr.cdf"); varattrib = Dict("unwritten_swapped" => Dict("DEPEND_TIME" => nothing)))
+    @test SDM.name(CDF.depend(ds["unwritten_swapped"], 1)) == "unwritten_epoch"
 end
 
 @testset "Attributes from a master" begin
@@ -314,6 +317,11 @@ end
     ok = cdfopen(file, t0, t1; master)["ok"]
     @test size(ok) == (3, 1)
     @test all(isnan, Array(ok))
+    # per-variable overrides take precedence over the master, here dropping its FILLVAL
+    varattrib = Dict("ok" => Dict("FILLVAL" => nothing))
+    unfilled = cdfopen(file, t0, t1; master, varattrib)["ok"]
+    @test isnothing(unfilled.attrib["FILLVAL"]) && !any(isnan, Array(unfilled))
+    @test unfilled.attrib["DEPEND_0"] == ok.attrib["DEPEND_0"]
 
     @test Array(SDM.dims(cdfopen(file; master)["flux"], 1)) == [10, 20, 30]
     @test SDM.ISTPSchema()(cdfopen(file; master)["ok"], :labels) == ["Ex", "Ey", "Ez"]
