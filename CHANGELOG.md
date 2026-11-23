@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking**: `VALIDMIN`/`VALIDMAX` no longer mask by default; opt in with `validmin = true`/`validmax = true`.
+
 ## [0.5.0]
 
 ### Changed

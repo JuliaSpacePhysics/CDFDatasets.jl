@@ -1,14 +1,10 @@
-# Default of the check keywords: read the attribute.
-struct FromAttrib end
-
-# ISTP requires FILLVAL on support_data too, where integers are mostly flags and status codes:
-# only `data` integers default to their attributes. Per ISTP, components run along dimension 1;
-# lengths fit them like `SpaceDataModel.ValidityChecks(x)`.
+# Components run along dimension 1 (ISTP).
 function _resolve_checks(checks, data, md)
     useattrib = eltype(data) <: AbstractFloat || get(md, "VAR_TYPE", nothing) == "data"
     n = ndims(data) > 1 ? size(data, 1) : 1
     return map(checks, ("FILLVAL", "VALIDMIN", "VALIDMAX")) do c, key
-        c isa FromAttrib || return c
+        c === false && return nothing  # else Bool <: Real makes it a bound of 0
+        c === true || return c
         return useattrib ? SDM._fit(get(md, key, nothing), n) : nothing
     end
 end
@@ -18,7 +14,7 @@ _hascomponents(m) = !isnothing(m) && any(v -> length(v) > 1, (m.fillval, m.valid
 """
     CDFVariable(data, name, parentdataset, metadata; fillval, validmin, validmax)
 
-Variable whose reads replace fill and out-of-range values by `NaN` (see [`variable`](@ref)).
+Variable whose reads replace invalid values by `NaN` (see [`variable`](@ref)).
 """
 struct CDFVariable{T, N, A <: AbstractArray{<:Any, N}, S, P, MD, M <: Union{Nothing, SDM.ValidityChecks}} <: AbstractCDFVariable{T, N}
     data::A
@@ -40,7 +36,7 @@ _decoded(::SDM.ValidityChecks{C}) where {C} = C
 
 # Float variables always get checks, as no-ops without attributes, so they share one type and read
 # path; `nothing` keeps an integer variable's stored type.
-function CDFVariable(data, name, parentdataset, metadata; fillval = FromAttrib(), validmin = FromAttrib(), validmax = FromAttrib())
+function CDFVariable(data, name, parentdataset, metadata; fillval = true, validmin = nothing, validmax = nothing)
     fillval, validmin, validmax = _resolve_checks((fillval, validmin, validmax), data, metadata)
     T = eltype(data)
     checked = T <: AbstractFloat || T <: Real && !all(isnothing, (fillval, validmin, validmax))
