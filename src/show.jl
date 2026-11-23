@@ -9,6 +9,7 @@ function Base.show(io::IO, ::MIME"text/plain", ds::CDFDataset)
     _has_interval(ds) && print(io, "View: ", ds.interval, "\n")
     isempty(ds.checks) || print(io, "Checks: ", ds.checks, "\n")
     isnothing(ds.master) || print(io, "Master: ", path(ds.master), "\n")
+    isnothing(ds.varattrib) || print(io, "Attribute overrides: ", join(keys(ds.varattrib), ", "), "\n")
 
     printstyled(io, "Dataset: ", path(ds), "\n", color = :red)
     print(io, "Group: ", SDM.name(ds), "\n\n")
@@ -67,8 +68,8 @@ function _show_limited(io::IO, var::AbstractCDFVariable)
     indent = " "^level
     delim = " × "
     attrs = var.attrib
-    units = strip(get(attrs, "UNITS", ""))
-    field = get(attrs, "CATDESC", get(attrs, "FIELDNAM", ""))
+    units = strip(something(get(attrs, "UNITS", nothing), ""))
+    field = @something get(attrs, "CATDESC", nothing) get(attrs, "FIELDNAM", nothing) ""
 
     printstyled(io, indent, SDM.name(var), color = :green)
     print(io, " (", join(size(var), delim), ")")

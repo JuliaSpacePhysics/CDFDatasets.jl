@@ -100,8 +100,9 @@ function dimvarname(var::CDFVariable, i::Int)
     dname = dimnames(var, i)
     # Some CDAWeb masters name a DEPEND missing from the file (`po_h1_tim` `Start_epoch`).
     (isnothing(dname) || !haskey(dataset(var), dname)) && return nothing
-    swap = _isrecorddim(var, i) && haskey(var.attrib, "DEPEND_TIME") && is_virtual(dataset(var)[dname])
-    return swap ? var.attrib["DEPEND_TIME"] : dname
+    _isrecorddim(var, i) || return dname
+    time = get(var.attrib, "DEPEND_TIME", nothing)
+    return time isa AbstractString && is_virtual(dataset(var)[dname]) ? time : dname
 end
 
 """

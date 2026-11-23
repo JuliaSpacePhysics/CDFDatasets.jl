@@ -7,17 +7,18 @@ end
 LockedDict{K, V}() where {K, V} = LockedDict(Dict{K, V}(), ReentrantLock())
 Base.get!(f::Base.Callable, ld::LockedDict, k) = @lock ld.lock get!(f, ld.d, k)
 
-struct CDFDataset{A, I, D, C <: NamedTuple, M}
+struct CDFDataset{A, I, D, C <: NamedTuple, M, V}
     source::A
     interval::I
     indices::D
     checks::C
     master::M
+    varattrib::V
 end
 
-function CDFDataset(source, interval = nothing; checks = (;), master = nothing)
+function CDFDataset(source, interval = nothing; checks = (;), master = nothing, varattrib = nothing)
     indices = isnothing(interval) ? nothing : LockedDict{String, Union{UnitRange{Int}, Vector{Int}, Nothing}}()
-    return CDFDataset(source, interval, indices, _checks(checks), _master(master))
+    return CDFDataset(source, interval, indices, _checks(checks), _master(master), varattrib)
 end
 
 _master(master::AbstractString) = CDF.CDFDataset(master)
@@ -33,7 +34,7 @@ function _checks(checks::NamedTuple)
 end
 
 """
-    CDFDataset(file; checks = (;), master = nothing)
+    CDFDataset(file; checks = (;), master = nothing, varattrib = nothing)
 
 Load the CDF dataset at the `file` path. Global attributes are entry vectors.
 """
@@ -45,7 +46,7 @@ Base.getproperty(ds::CDFDataset, s::Symbol) = s === :attrib ? _attrib(ds) : getf
 Base.propertynames(ds::CDFDataset, private::Bool = false) = (fieldnames(typeof(ds))..., :attrib)
 
 Base.view(ds::CDFDataset, interval::Interval) =
-    CDFDataset(ds.source, _has_interval(ds) ? intersect(ds.interval, interval) : interval; ds.checks, ds.master)
+    CDFDataset(ds.source, _has_interval(ds) ? intersect(ds.interval, interval) : interval; ds.checks, ds.master, ds.varattrib)
 
 _is_multi_source(ds::CDFDataset) = ds.source isa AbstractVector
 _source1(ds::CDFDataset) = _is_multi_source(ds) ? first(ds.source) : ds.source
@@ -62,7 +63,7 @@ end
 
 _holds_values(var) = !is_record_varying(var) && !isempty(var)
 
-_unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks, ds.master)
+_unclipped(ds::CDFDataset) = CDFDataset(ds.source; ds.checks, ds.master, ds.varattrib)
 
 """
     variable(ds, name; metadata, fillval, validmin, validmax) :: CDFVariable
@@ -108,13 +109,16 @@ CDFDataset(sources::AbstractVector{<:AbstractString}; kw...) = CDFDataset(CDF.CD
 
 function _variable_unclipped(ds::CDFDataset, name::String; metadata = nothing, kw...)
     var1 = (@something _source(ds, name) _source1(ds))[name]
-    md = @something metadata _varattrib(ds.master, name, var1)
+    md = @something metadata _varattrib(ds, name, var1)
     data = _is_multi_source(ds) && is_record_varying(var1) ? _concat(map(source -> _lazy(source[name]), ds.source), ndims(var1)) : _lazy(var1)
     return _variable(data, name, ds, md, merge(ds.checks, values(kw)))
 end
 
-_varattrib(master, name, var) = isnothing(master) || !haskey(master, name) ? var.attrib :
-    SDM.OverlayDict(var.attrib, master[name].attrib)
+function _varattrib(ds::CDFDataset, name, var)
+    m, v = ds.master, ds.varattrib
+    a = isnothing(m) || !haskey(m, name) ? var.attrib : SDM.OverlayDict(var.attrib, m[name].attrib)
+    return isnothing(v) || !haskey(v, name) ? a : SDM.OverlayDict(a, v[name])
+end
 
 # Variables are not inferred; call boundaries compile construction for their concrete types
 @noinline _lazy(var::CDF.CDFVariable) = FileArray(var)

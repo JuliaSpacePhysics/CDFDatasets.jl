@@ -22,4 +22,6 @@
 
     str = sprint(show, ds["BR"]; context = :limit => true)
     @test str == "BR (744) dims=Epoch [BR in RTN (Radial-Tangential-Normal) coordinate system; nT]"
+    br = variable(ds, "BR"; metadata = Dict("UNITS" => nothing, "CATDESC" => nothing, "FIELDNAM" => "Radial field"))
+    @test endswith(sprint(show, br; context = :limit => true), "[Radial field]")
 end
