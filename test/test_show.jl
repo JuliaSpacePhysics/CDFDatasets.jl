@@ -1,22 +1,15 @@
 @testset "CDFDataset show" begin
     ds = CDFDataset(data_path("omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
 
-    # Test compact show
     str = string(ds)
     @test occursin("omni_coho1hr_merged_mag_plasma", str)
     @test occursin("12 variables", str)
 
-    # Test MIME"text/plain" show
-    io = IOBuffer()
-    show(io, MIME"text/plain"(), ds)
-    str = String(take!(io))
+    str = sprint(show, MIME"text/plain"(), ds)
     @test occursin("Group: omni_coho1hr_merged_mag_plasma", str)
     @test occursin("Data variables\n", str)
 
-    # Test limited MIME"text/plain" show
-    io = IOBuffer()
-    show(IOContext(io, :limit => true), MIME"text/plain"(), ds)
-    str = String(take!(io))
+    str = sprint(show, MIME"text/plain"(), ds; context = :limit => true)
     @test occursin("28 attributes: Project, Discipline", str)
     @test occursin("Global attributes\n", str)
 

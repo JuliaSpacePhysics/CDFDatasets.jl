@@ -15,7 +15,7 @@ function Base.show(io::IO, ::MIME"text/plain", ds::CDFDataset)
     print(io, "Group: ", SDM.name(ds), "\n\n")
 
     varnames = keys(ds)
-    if length(varnames) > 0
+    if !isempty(varnames)
         printstyled(io, "Data variables\n", color = :red)
 
         vars = [ds[name] for name in varnames]
@@ -97,33 +97,22 @@ function show_attrib(io::IO, attrs)
 end
 
 function show_attrib_summary(io::IO, attrs)
-    level = get(io, :level, 0)
-    indent = " "^level
-    names = collect(keys(attrs))
-
-    print(io, indent, length(names), " attributes")
-    if !isempty(names)
-        n_show = min(length(names), 8)
-        print(io, ": ", join(names[1:n_show], ", "))
-        length(names) > n_show && print(io, ", ...")
+    indent = " "^get(io, :level, 0)
+    print(io, indent, length(attrs), " attributes")
+    if !isempty(attrs)
+        print(io, ": ")
+        join(io, Iterators.take(keys(attrs), 8), ", ")
+        length(attrs) > 8 && print(io, ", ...")
     end
-    print(io, "\n")
+    println(io)
     return
 end
 
 function Base.show(io::IO, ds::CDFDataset)
-    varnames_list = keys(ds)
-    dataset_name = SDM.name(ds)
-    max_show = 12
-    print(io, dataset_name, " (", length(varnames_list), " variable")
-    length(varnames_list) != 1 && print(io, "s")
-    print(io, ": ")
-
-    if !isempty(varnames_list)
-        n_show = min(max_show, length(varnames_list))
-        print(io, join(varnames_list[1:n_show], ", "))
-        length(varnames_list) > max_show && print(io, ", \u2026")
-    end
+    names = keys(ds)
+    print(io, SDM.name(ds), " (", length(names), length(names) == 1 ? " variable: " : " variables: ")
+    join(io, Iterators.take(names, 12), ", ")
+    length(names) > 12 && print(io, ", …")
     print(io, ")")
     return
 end

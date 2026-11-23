@@ -98,6 +98,6 @@ _axis(::Val{i}) where {i} = i
 SDM.unwrap(var::CDFVariable) = Array(var)
 SDM.axiskeys(var::CDFVariable, i::Integer) = SDM.unwrap(SDM.dims(var, i))
 
-_droprecord(c) = ndims(c) > 1 && size(c, ndims(c)) == 1 ? view(c, ntuple(_ -> :, ndims(c) - 1)..., 1) : c
+_droprecord(c) = ndims(c) > 1 && size(c, ndims(c)) == 1 ? selectdim(c, ndims(c), 1) : c
 
 _fits(c, var, i) = ndims(c) == 1 ? length(c) == size(var, i) : size(c) == (size(var, i), size(var, ndims(var)))

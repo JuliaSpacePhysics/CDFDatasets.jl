@@ -2,7 +2,6 @@
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/CDFDatasets.jl/dev/)
 [![DOI](https://zenodo.org/badge/1056209910.svg)](https://doi.org/10.5281/zenodo.17517175)
-[![Coverage](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/CDFDatasets.jl)
 
 A julia package to read [Common Data Format (CDF)](https://cdf.gsfc.nasa.gov/) datasets.
 
@@ -15,26 +14,39 @@ using CDFDatasets
 
 ds = cdfopen(joinpath(pkgdir(CDFDatasets), "data/omni_coho1hr_merged_mag_plasma_20200501_v01.cdf"))
 times = ds["Epoch"]
-br = ds["BR"]
+br = ds["BR"]           # lazy handle to the variable
+subset = br[11:20]      # read and decode ten records into an array
+values = Array(br)      # read and decode the entire variable into memory
+copyto!(values, br)     # read into an existing buffer
 ```
 
 `keys(ds)` lists variables; `ds.attrib` and `var.attrib` are attribute dictionaries; `depend(var, i)` is the `DEPEND_i` coordinate variable, or `nothing`.
 
 `cdfopen(files)` lazily concatenates records in file order. `cdfopen(files, t0, t1)` clips variables with a time coordinate to `[t0, t1)`.
 
-## Missing values
+## Master CDFs and attribute overrides
 
-Reads return `NaN` for values equal to `FILLVAL`, so integer `data` variables with a `FILLVAL` read as floats; integer `support_data`/`metadata` (flags, status codes) read as stored. `VALIDMIN`/`VALIDMAX` (per component) are opt-in.
+Either keyword can be passed to `cdfopen` on its own.
 
 ```julia
-var = ds["BR"]                                                      # lazy: nothing read yet
-Array(var)                                                          # reads and decodes; `var[i]` and `copyto!(view(buf, :, 1:10), view(var, :, 11:20))` reads part
-parent(var)                                                         # stored on-disk data, undecoded
-variable(ds, "BR"; validmin = true, validmax = 100)                 # `true` uses the attribute, `nothing` disables, a value overrides it
-cdfopen(file; checks = (; validmin = true, validmax = true))        # dataset-wide `variable` keywords
-cdfopen(file; master = path)                                        # master CDF's variable attributes and non-record-varying variables override the file's; its global attributes fill the file's gaps
-cdfopen(file; varattrib = Dict(name => Dict("FILLVAL" => nothing)))  # skip fill masking for this variable
+ds = cdfopen(file; master = master_path,
+    varattrib = Dict("BR" => Dict("CATDESC" => "Radial magnetic field")))
 ```
+
+For variable attributes, `varattrib` overrides the master, which overrides the data file. The master also supplies non-record-varying values and fills missing global attributes.
+
+## Missing values
+
+Reads replace `FILLVAL` with `NaN`. Integer data variables with a fill value therefore read as floats. Integer flags and other `support_data` or `metadata` variables keep their stored type. `parent(br)` gives access to undecoded values.
+
+Range checks are opt-in. Set defaults when opening the dataset or override them for one variable.
+
+```julia
+ds = cdfopen(file; checks = (; validmin = true, validmax = true))
+br = variable(ds, "BR"; validmax = 100)
+```
+
+For each check, `true` uses the corresponding attribute (per component when applicable), `false` disables the check, and a number supplies an explicit value.
 
 ## Time series
 

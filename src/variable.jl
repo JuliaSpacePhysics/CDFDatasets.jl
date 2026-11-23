@@ -29,10 +29,8 @@ end
 
 CDFVariable(data::AbstractArray{R}, name, parentdataset, metadata, mask::Nothing) where {R} =
     CDFVariable{R}(data, name, parentdataset, metadata, mask)
-CDFVariable(data, name, parentdataset, metadata, mask::SDM.ValidityChecks) =
-    CDFVariable{_decoded(mask)}(data, name, parentdataset, metadata, mask)
-
-_decoded(::SDM.ValidityChecks{C}) where {C} = C
+CDFVariable(data, name, parentdataset, metadata, mask::SDM.ValidityChecks{T}) where {T} =
+    CDFVariable{T}(data, name, parentdataset, metadata, mask)
 
 # Float variables always get checks, as no-ops without attributes, so they share one type and read
 # path; `nothing` keeps an integer variable's stored type.
