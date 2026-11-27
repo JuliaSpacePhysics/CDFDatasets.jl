@@ -1,7 +1,7 @@
 name: Benchmark
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
   push:
@@ -14,4 +14,3 @@ jobs:
     permissions:
       actions: write
       contents: read
-      pull-requests: write
