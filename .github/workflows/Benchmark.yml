@@ -1,16 +1,9 @@
 name: Benchmark
-
 on:
   pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-
+    branches: [main]
 jobs:
   benchmark:
     uses: JuliaSpacePhysics/actions/.github/workflows/benchmark.yml@main
-    permissions:
-      actions: write
-      contents: read
+    permissions: {actions: write, contents: read}
